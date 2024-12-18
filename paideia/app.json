@@ -23,7 +23,8 @@
       },
       "splashScreen": {
         "hideNavigationBar": true
-      }
+      },
+      "package": "com.kiboss.paideia"
     },
     "web": {
       "bundler": "metro",
