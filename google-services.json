@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "809416017452",
+    "firebase_url": "https://paideia-51b55-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "paideia-51b55",
+    "storage_bucket": "paideia-51b55.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809416017452:android:6761da306cca35517d7389",
+        "android_client_info": {
+          "package_name": "com.kiboss.paideia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYkE6Z5NEG39AKXjbC7j7YGiAbwufH3_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
