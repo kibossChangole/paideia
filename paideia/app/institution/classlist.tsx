@@ -12,6 +12,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, child, get, getDatabase } from 'firebase/database';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import AttendanceTab from './components/attendancetab';
+import GradesTab from './components/gradestab';
 
 interface Student {
     id: string;
@@ -109,17 +111,9 @@ export default function ClassList() {
                     </ScrollView>
                 );
             case 'attendance':
-                return (
-                    <View style={styles.placeholderContainer}>
-                        <Text style={styles.placeholderText}>Attendance tracking coming soon</Text>
-                    </View>
-                );
+                return <AttendanceTab currentGrade={currentGrade} />;
             case 'grades':
-                return (
-                    <View style={styles.placeholderContainer}>
-                        <Text style={styles.placeholderText}>Grade reports coming soon</Text>
-                    </View>
-                );
+                return <GradesTab currentGrade={currentGrade} />;
         }
     };
 
@@ -182,7 +176,7 @@ export default function ClassList() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#3497A3',
     },
     centerContainer: {
         flex: 1,
@@ -192,7 +186,7 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 84,
+        paddingTop: Platform.OS === 'ios' ? 60 : 50,
         backgroundColor: '#3497A3',
     },
     tabContainer: {
@@ -202,13 +196,17 @@ const styles = StyleSheet.create({
         borderBottomColor: '#E0E0E0',
     },
     tab: {
+        margin:3,
         flex: 1,
         paddingVertical: 16,
         alignItems: 'center',
+        
     },
     activeTab: {
-        borderBottomWidth: 2,
-        borderBottomColor: '#3497A3',
+        borderBottomWidth: 3,
+        borderColor:'#3497A3',
+        
+        
     },
     tabText: {
         fontSize: 16,
@@ -254,10 +252,13 @@ const styles = StyleSheet.create({
     },
     cardsContainer: {
         padding: 16,
+        marginTop:10,
     },
     studentCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#3497A3',
         borderRadius: 12,
+        borderWidth:0,
+        borderColor: '#FFFFFF',
         padding: 16,
         marginBottom: 16,
         ...Platform.select({
@@ -275,13 +276,13 @@ const styles = StyleSheet.create({
     studentName: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#333333',
+        color: '#ffffff',
         marginBottom: 8,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     studentDetails: {
         fontSize: 14,
-        color: '#666666',
+        color: '#FFFFFF',
         marginBottom: 4,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },

@@ -105,6 +105,18 @@ export default function DashboardLayout() {
                     href: null, // This hides it from the tab bar
                 }}
             />
+            <Tabs.Screen
+                name="components/attendancetab"
+                options={{
+                    href: null, // This hides it from the tab bar
+                }}
+            />
+            <Tabs.Screen
+                name="components/gradestab"
+                options={{
+                    href: null, // This hides it from the tab bar
+                }}
+            />
         </Tabs>
     );
 }
