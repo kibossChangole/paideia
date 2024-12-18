@@ -6,7 +6,8 @@ import {
     ScrollView,
     Platform,
     ActivityIndicator,
-    TouchableOpacity
+    TouchableOpacity,
+    Dimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, child, get, getDatabase } from 'firebase/database';
@@ -27,10 +28,13 @@ interface Student {
     submittedAt: string;
 }
 
+type TabType = 'students' | 'attendance' | 'grades';
+
 export default function ClassList() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const currentGrade = Number(params.grade);
+    const [activeTab, setActiveTab] = useState<TabType>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -38,7 +42,7 @@ export default function ClassList() {
 
     useEffect(() => {
         fetchGradeStudents();
-    }, [currentGrade]); // Add currentGrade as dependency
+    }, [currentGrade]);
 
     const fetchGradeStudents = async () => {
         try {
@@ -52,25 +56,14 @@ export default function ClassList() {
 
             if (studentsSnapshot.exists()) {
                 const studentsData = studentsSnapshot.val();
-
-                // Log for debugging
-                console.log('Current Grade:', currentGrade);
-
                 const gradeStudents = Object.entries(studentsData)
                     .map(([id, data]: [string, any]) => ({
                         id,
                         ...data
                     }))
-                    .filter((student: Student) => {
-                        // Verify both conditions
-                        const isInSchool = student.schoolCode === schoolId;
-                        const isInGrade = student.grade === currentGrade;
-
-                        // Log for debugging
-                        console.log('Student:', student.name, 'Grade:', student.grade, 'Match:', isInGrade);
-
-                        return isInSchool && isInGrade;
-                    });
+                    .filter((student: Student) =>
+                        student.schoolCode === schoolId && student.grade === currentGrade
+                    );
 
                 setStudents(gradeStudents);
             } else {
@@ -81,6 +74,52 @@ export default function ClassList() {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'students':
+                return (
+                    <ScrollView style={styles.scrollView}>
+                        <View style={styles.cardsContainer}>
+                            {students.length === 0 ? (
+                                <Text style={styles.noDataText}>No students found in Grade {currentGrade}</Text>
+                            ) : (
+                                students.map((student) => (
+                                    <View key={student.id} style={styles.studentCard}>
+                                        <Text style={styles.studentName}>{student.name}</Text>
+                                        <Text style={styles.studentDetails}>ID: {student.id}</Text>
+                                        <Text style={styles.studentDetails}>
+                                            Guardian: {student.guardianName}
+                                        </Text>
+                                        <Text style={styles.studentDetails}>
+                                            Contact: {student.guardianContact}
+                                        </Text>
+                                        <View style={styles.feeContainer}>
+                                            <Text style={styles.studentDetails}>Fees Balance:</Text>
+                                            <Text style={styles.studentFee}>
+                                                KES {student.feeStructure?.toLocaleString()}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ))
+                            )}
+                        </View>
+                    </ScrollView>
+                );
+            case 'attendance':
+                return (
+                    <View style={styles.placeholderContainer}>
+                        <Text style={styles.placeholderText}>Attendance tracking coming soon</Text>
+                    </View>
+                );
+            case 'grades':
+                return (
+                    <View style={styles.placeholderContainer}>
+                        <Text style={styles.placeholderText}>Grade reports coming soon</Text>
+                    </View>
+                );
         }
     };
 
@@ -115,32 +154,27 @@ export default function ClassList() {
                 </Text>
             </View>
 
-            <ScrollView style={styles.scrollView}>
-                <View style={styles.cardsContainer}>
-                    {students.length === 0 ? (
-                        <Text style={styles.noDataText}>No students found in Grade {currentGrade}</Text>
-                    ) : (
-                        students.map((student) => (
-                            <View key={student.id} style={styles.studentCard}>
-                                <Text style={styles.studentName}>{student.name}</Text>
-                                <Text style={styles.studentDetails}>ID: {student.id}</Text>
-                                <Text style={styles.studentDetails}>
-                                    Guardian: {student.guardianName}
-                                </Text>
-                                <Text style={styles.studentDetails}>
-                                    Contact: {student.guardianContact}
-                                </Text>
-                                <View style={styles.feeContainer}>
-                                    <Text style={styles.studentDetails}>Fees Balance:</Text>
-                                    <Text style={styles.studentFee}>
-                                        KES {student.feeStructure?.toLocaleString()}
-                                    </Text>
-                                </View>
-                            </View>
-                        ))
-                    )}
-                </View>
-            </ScrollView>
+            <View style={styles.tabContainer}>
+                {(['students', 'attendance', 'grades'] as TabType[]).map((tab) => (
+                    <TouchableOpacity
+                        key={tab}
+                        style={[
+                            styles.tab,
+                            activeTab === tab && styles.activeTab
+                        ]}
+                        onPress={() => setActiveTab(tab)}
+                    >
+                        <Text style={[
+                            styles.tabText,
+                            activeTab === tab && styles.activeTabText
+                        ]}>
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            {renderTabContent()}
         </View>
     );
 }
@@ -160,6 +194,40 @@ const styles = StyleSheet.create({
         padding: 24,
         paddingTop: Platform.OS === 'ios' ? 60 : 84,
         backgroundColor: '#3497A3',
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+    activeTab: {
+        borderBottomWidth: 2,
+        borderBottomColor: '#3497A3',
+    },
+    tabText: {
+        fontSize: 16,
+        color: '#666666',
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    },
+    activeTabText: {
+        color: '#3497A3',
+        fontWeight: '600',
+    },
+    placeholderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    placeholderText: {
+        fontSize: 16,
+        color: '#666666',
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     backButton: {
         marginBottom: 16,
