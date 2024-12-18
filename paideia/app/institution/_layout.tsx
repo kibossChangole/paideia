@@ -117,6 +117,13 @@ export default function DashboardLayout() {
                     href: null, // This hides it from the tab bar
                 }}
             />
+            <Tabs.Screen
+                name="components/graderecords"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
+        
     );
 }

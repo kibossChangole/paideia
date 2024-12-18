@@ -36,7 +36,8 @@ export default function ClassList() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const currentGrade = Number(params.grade);
-    const [activeTab, setActiveTab] = useState<TabType>('students');
+    const initialTab = params.activeTab as TabType || 'students';
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
