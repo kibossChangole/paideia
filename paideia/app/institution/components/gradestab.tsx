@@ -35,7 +35,7 @@ export default function GradesTab() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>Grade {currentGrade} Subjects</Text>
+            <Text style={styles.header}>Grade {currentGrade} Subjects</Text> 
             <View style={styles.grid}>
                 {subjects.map((subject) => (
                     <TouchableOpacity

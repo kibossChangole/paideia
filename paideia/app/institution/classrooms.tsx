@@ -7,7 +7,8 @@ import {
     Platform,
     ActivityIndicator,
     TouchableOpacity,
-    Dimensions
+    Dimensions,
+    Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, child, get, getDatabase } from 'firebase/database';
@@ -108,11 +109,18 @@ export default function GradeDashboard() {
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.schoolName}>{schoolData?.name}</Text>
-                <Text style={styles.regionText}>{schoolData?.region}</Text>
-            </View>
+            <View style={styles.container}>
+                <View style={styles.header}>
+                <View style={styles.headerTextContainer}>
+                    <Text style={styles.schoolName}>{schoolData?.name}</Text>
+                    <Text style={styles.regionText}>{schoolData?.region}</Text>
+                </View>
+                    <Image
+                        source={require('../../assets/images/PaideiaMini.png')}
+                        style={styles.headerIcon}
+                    />
+                   
+                </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Text style={styles.sectionTitle}>Grade Panel</Text>
@@ -151,20 +159,44 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+       
     },
     scrollContent: {
         flexGrow: 1,
+        
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
+        
+        
     },
     header: {
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 84,
+        paddingTop: Platform.OS === 'ios' ? 60 : 94,
         backgroundColor: '#3497A3',
+        flexDirection: 'row',
+       
+        alignItems: 'center',
+    },
+    headerContent: {
+        
+        flexDirection: 'row',
+        alignItems: 'center',
+        
+    },
+    headerIcon: {
+        position:'absolute',
+        width: 120,
+        height: 120,
+        bottom:10,
+        right:0,
+    },
+    headerTextContainer: {
+        marginLeft: 5,
+        flex: 1,
     },
     schoolName: {
         fontSize: 24,

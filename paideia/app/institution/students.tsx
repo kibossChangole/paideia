@@ -9,7 +9,8 @@ import {
     TouchableOpacity,
     Modal,
     TextInput,
-    Alert
+    Alert,
+    Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, child, get, getDatabase, update } from 'firebase/database';
@@ -162,8 +163,15 @@ const StudentDashboard: React.FC = () => {
     return (
         <ScrollView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.schoolName}>{schoolData?.name}</Text>
-                <Text style={styles.regionText}>{schoolData?.region}</Text>
+                <View style={styles.headerTextContainer}>
+                    <Text style={styles.schoolName}>{schoolData?.name}</Text>
+                    <Text style={styles.regionText}>{schoolData?.region}</Text>
+                </View>
+                <Image
+                    source={require('../../assets/images/PaideiaMini.png')}
+                    style={styles.headerIcon}
+                />
+
             </View>
 
             <Text style={styles.sectionTitle}>Students</Text>
@@ -179,7 +187,7 @@ const StudentDashboard: React.FC = () => {
                             <Text style={styles.studentDetails}>Guardian: {student.guardianName}</Text>
                             <Text style={styles.studentDetails}>Contact: {student.guardianContact}</Text>
                             <Text style={styles.studentDetails}>Current Grade: {student.grade || 'Not assigned'}</Text>
-                            <Text style={styles.studentDetails}>Fees Balance:</Text>
+                            <Text style={styles.studentFeesegment}>Fee Balance:</Text>
                             <Text style={styles.studentFee}>
                                KES {student.feeStructure?.toLocaleString()}
                             </Text>
@@ -273,8 +281,28 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 84,
+        paddingTop: Platform.OS === 'ios' ? 60 : 94,
         backgroundColor: '#3497A3',
+        flexDirection: 'row',
+
+        alignItems: 'center',
+    },
+    headerContent: {
+
+        flexDirection: 'row',
+        alignItems: 'center',
+
+    },
+    headerIcon: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        bottom: 10,
+        right: 0,
+    },
+    headerTextContainer: {
+        marginLeft: 5,
+        flex: 1,
     },
     schoolName: {
         fontSize: 24,
@@ -335,6 +363,17 @@ const styles = StyleSheet.create({
         marginBottom: 4,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
+
+    studentFeesegment:{
+        borderTopWidth:1,
+        paddingTop:8,
+        marginTop:12,
+        marginBottom: 4,
+        color: '#FFFFFF',
+        borderTopColor: '#FFFFFF',
+
+    },
+
     gradeButton: {
         backgroundColor: '#FFFFFF',
         padding: 15,
@@ -419,6 +458,7 @@ const styles = StyleSheet.create({
     studentFee:{
         color: '#FF6347' ,
         fontWeight:500,
+     
         fontSize:16,
     },
     submitButton: {

@@ -8,6 +8,7 @@ import {
     Platform,
     ActivityIndicator,
     TouchableOpacity,
+    Image,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { ref, child, get, set, getDatabase } from 'firebase/database';
@@ -153,6 +154,10 @@ export default function GradeRecords() {
                 <Text style={styles.headerText}>
                     Grade {currentGrade} - {subjectName}
                 </Text>
+                <Image
+                    source={require('../../../assets/images/PaideiaMini.png')}
+                    style={styles.headerIcon}
+                />
             </View>
 
             <ScrollView style={styles.scrollView}>
@@ -180,7 +185,7 @@ export default function GradeRecords() {
                                             updateStudentGrade(student.id, 'grade', value)
                                         }
                                         style={styles.gradePicker}>
-                                        <Picker.Item label="Select" value="" />
+                                        <Picker.Item label="N/A" value="" />
                                         <Picker.Item label="A" value="A" />
                                         <Picker.Item label="B" value="B" />
                                         <Picker.Item label="C" value="C" />
@@ -208,7 +213,7 @@ export default function GradeRecords() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#3497A3',
     },
     loadingContainer: {
         flex: 1,
@@ -218,8 +223,25 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 55,
+        paddingTop: Platform.OS === 'ios' ? 60 : 83,
         backgroundColor: '#3497A3',
+    },
+    headerContent: {
+
+        flexDirection: 'row',
+        alignItems: 'center',
+
+    },
+    headerIcon: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        bottom: 10,
+        right: 0,
+    },
+    headerTextContainer: {
+        marginLeft: 5,
+        flex: 1,
     },
     backButton: {
         marginBottom: 16,
@@ -251,13 +273,14 @@ const styles = StyleSheet.create({
     studentName: {
         flex: 1,
         fontSize: 16,
-        color: '#333333',
+        color: '#FFFFFF',
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     gradeInputs: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+      
     },
     percentageInput: {
         width: 60,
@@ -279,8 +302,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8F8F8',
     },
     gradePicker: {
-        height: 40,
-        width: '100%',
+        height: 50,
+        marginTop:-5,
+       
+        width: '110%',
+       
+        
+        
     },
     savingOverlay: {
         position: 'absolute',

@@ -7,7 +7,8 @@ import {
     Platform,
     ActivityIndicator,
     TouchableOpacity,
-    Dimensions
+    Dimensions,
+    Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, child, get, getDatabase } from 'firebase/database';
@@ -35,9 +36,9 @@ type TabType = 'students' | 'attendance' | 'grades';
 export default function ClassList() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const currentGrade = Number(params.grade);
-    const initialTab = params.activeTab as TabType || 'students';
-    const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+const currentGrade = Number(params.grade);
+const initialTab = params.activeTab as TabType || 'students';
+const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -100,7 +101,7 @@ export default function ClassList() {
                                             Contact: {student.guardianContact}
                                         </Text>
                                         <View style={styles.feeContainer}>
-                                            <Text style={styles.studentDetails}>Fees Balance:</Text>
+                                            <Text style={styles.studentDetails}>Fee Balance:</Text>
                                             <Text style={styles.studentFee}>
                                                 KES {student.feeStructure?.toLocaleString()}
                                             </Text>
@@ -147,6 +148,10 @@ export default function ClassList() {
                 <Text style={styles.studentCountText}>
                     {students.length} {students.length === 1 ? 'Student' : 'Students'}
                 </Text>
+                <Image
+                    source={require('../../assets/images/PaideiaMini.png')}
+                    style={styles.headerIcon}
+                />
             </View>
 
             <View style={styles.tabContainer}>
@@ -187,8 +192,25 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 50,
+        paddingTop: Platform.OS === 'ios' ? 60 : 59,
         backgroundColor: '#3497A3',
+    },
+    headerContent: {
+
+        flexDirection: 'row',
+        alignItems: 'center',
+
+    },
+    headerIcon: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        bottom: 10,
+        right: 0,
+    },
+    headerTextContainer: {
+        marginLeft: 5,
+        flex: 1,
     },
     tabContainer: {
         flexDirection: 'row',
