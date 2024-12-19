@@ -8,9 +8,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-      "assetBundlePatterns": [
-      "**/*"
-    ],
+ 
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "paideia",
