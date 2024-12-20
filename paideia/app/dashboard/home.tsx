@@ -1,5 +1,6 @@
+import Icon from 'react-native-vector-icons/Feather';
 import React, { useState, useEffect } from 'react';
-import { ScrollView, RefreshControl, ActivityIndicator, View, StyleSheet, Platform, Image } from 'react-native';
+import { ScrollView, RefreshControl, ActivityIndicator, View, StyleSheet, Platform, Image, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { database } from '../(tabs)/firebaseConfig';
 import { ref, child, get, getDatabase } from 'firebase/database';
@@ -25,6 +26,14 @@ type School = {
     name: string;
     schoolCode: string;
     region: string;
+};
+
+type Announcement = {
+    id: string;
+    title: string;
+    content: string;
+    date: string;
+    author: string;
 };
 
 // Card Components
@@ -53,6 +62,9 @@ export default function StudentDashboard() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
 
     const fetchSchoolName = async (schoolCode: string) => {
         try {
@@ -96,6 +108,7 @@ export default function StudentDashboard() {
                 if (student) {
                     setStudentData(student);
                     fetchSchoolName(student.schoolCode);
+                    fetchAnnouncements(student.schoolCode); 
                 } else {
                     setError('Student not found');
                     router.push('/');
@@ -109,6 +122,29 @@ export default function StudentDashboard() {
         } finally {
             setLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    const fetchAnnouncements = async (schoolCode: string) => {
+        try {
+            const dbRef = ref(getDatabase());
+            const snapshot = await get(child(dbRef, 'schools'));
+
+            if (snapshot.exists()) {
+                const schools = snapshot.val();
+                const schoolEntry = Object.entries(schools).find(([key, value]: [string, any]) =>
+                    value.schoolCode === schoolCode
+                );
+
+                if (schoolEntry) {
+                    const [, schoolData] = schoolEntry;
+                    if (schoolData.announcements) {
+                        setAnnouncements(schoolData.announcements);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching announcements:', error);
         }
     };
 
@@ -176,6 +212,71 @@ export default function StudentDashboard() {
         >
             <View style={styles.content}>
                 <ProfileCard />
+
+                <Card>
+               
+        
+                        <View style={styles.announcementsContainer}>
+                            <View style={styles.announcementHeader}>
+                                <ThemedText style={styles.announcementTitle}>Latest Announcements</ThemedText>
+                                <View style={styles.paginationControls}>
+                                <TouchableOpacity
+                                    onPress={() => setCurrentAnnouncementIndex(prev =>
+                                        prev > 0 ? prev - 3 : prev
+                                    )}
+                                    disabled={currentAnnouncementIndex === 0}
+                                    style={styles.paginationButton}
+                                >
+                                    <Icon
+                                        name="chevron-left"
+                                        size={24}
+                                        color="#FFFFFF"
+                                        style={[
+                                            currentAnnouncementIndex === 0 && styles.paginationArrowDisabled
+                                        ]}
+                                    />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setCurrentAnnouncementIndex(prev =>
+                                        prev + 3 < announcements.length ? prev + 3 : prev
+                                    )}
+                                    disabled={currentAnnouncementIndex + 3 >= announcements.length}
+                                    style={styles.paginationButton}
+                                >
+                                    <Icon
+                                        name="chevron-right"
+                                        size={24}
+                                        color="#FFFFFF"
+                                        style={[
+                                            (currentAnnouncementIndex + 3 >= announcements.length) &&
+                                            styles.paginationArrowDisabled
+                                        ]}
+                                    />
+                                </TouchableOpacity>
+                                </View>
+                            </View>
+                            {announcements.slice(currentAnnouncementIndex, currentAnnouncementIndex + 3).map((announcement) => (
+                                <View key={announcement.id} style={styles.announcementItem}>
+                                    <View style={styles.announcementItemHeader}>
+                                        <ThemedText style={styles.announcementItemTitle}>{announcement.title}</ThemedText>
+                                        <ThemedText style={styles.announcementDate}>
+                                            {new Date(announcement.date).toLocaleDateString()}
+                                        </ThemedText>
+                                    </View>
+                                    <ThemedText style={styles.announcementContent}>{announcement.content}</ThemedText>
+                                    <ThemedText style={styles.announcementAuthor}>- {announcement.author}</ThemedText>
+                                </View>
+                            ))}
+                            {announcements.length === 0 && (
+                                <View style={styles.noAnnouncementsContainer}>
+                                    <ThemedText style={styles.noAnnouncementsText}>
+                                        No announcements available
+                                    </ThemedText>
+                                </View>
+                            )}
+                        </View>
+                
+                </Card>
 
                 <Card>
                     <CardHeader>
@@ -359,6 +460,83 @@ const styles = StyleSheet.create({
         backgroundColor: '#3497A3',
         padding: 24,
     },
+
+    announcementsContainer: {
+        backgroundColor: '#3497A3',
+        borderRadius: 8,
+        padding: 16,
+    },
+    announcementHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    announcementTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    
+
+    paginationControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8, // Add space between arrows
+    },
+    paginationButton: {
+        padding: 8, // Add padding for better touch area
+    },
+    paginationArrowDisabled: {
+        opacity: 0.3,
+    },
+    announcementItem: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    announcementItemHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    announcementItemTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#3497A3',
+        flex: 1,
+    },
+    announcementDate: {
+        fontSize: 12,
+        color: '#666666',
+    },
+    announcementContent: {
+        fontSize: 14,
+        color: '#333333',
+        marginBottom: 8,
+        lineHeight: 20,
+    },
+    announcementAuthor: {
+        fontSize: 12,
+        color: '#666666',
+        fontStyle: 'italic',
+        textAlign: 'right',
+    },
+    noAnnouncementsContainer: {
+        padding: 24,
+        alignItems: 'center',
+    },
+    noAnnouncementsText: {
+        fontSize: 16,
+        color: '#FFFFFF',
+        fontStyle: 'italic',
+    },
+
+
     detailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
