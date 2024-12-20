@@ -363,44 +363,46 @@ const SchoolDashboardScreen: React.FC = () => {
 
             <View style={styles.content}>
                
-                <Card title="Announcements">
+          
                     <View style={styles.announcementsContainer}>
                         <View style={styles.announcementHeader}>
                             <ThemedText style={styles.announcementTitle}>Latest Announcements</ThemedText>
                             <View style={styles.paginationControls}>
-                                    <TouchableOpacity
-                                        onPress={() => setCurrentAnnouncementIndex(prev =>
-                                            prev > 0 ? prev - 3 : prev
-                                        )}
-                                        disabled={currentAnnouncementIndex === 0}
-                                        style={styles.paginationButton}
-                                    >
-                                        <Icon
-                                            name="chevron-left"
-                                            size={24}
-                                            color="#FFFFFF"
-                                            style={[
-                                                currentAnnouncementIndex === 0 && styles.paginationArrowDisabled
-                                            ]}
-                                        />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        onPress={() => setCurrentAnnouncementIndex(prev =>
-                                            prev + 3 < announcements.length ? prev + 3 : prev
-                                        )}
-                                        disabled={currentAnnouncementIndex + 3 >= announcements.length}
-                                        style={styles.paginationButton}
-                                    >
-                                        <Icon
-                                            name="chevron-right"
-                                            size={24}
-                                            color="#FFFFFF"
-                                            style={[
-                                                (currentAnnouncementIndex + 3 >= announcements.length) &&
-                                                styles.paginationArrowDisabled
-                                            ]}
-                                        />
-                                    </TouchableOpacity>
+                                    <View style={styles.paginationControls}>
+                                        <TouchableOpacity
+                                            onPress={() => setCurrentAnnouncementIndex(prev =>
+                                                prev > 0 ? prev - 3 : prev
+                                            )}
+                                            disabled={currentAnnouncementIndex === 0}
+                                            style={styles.paginationButton}
+                                        >
+                                            <Icon
+                                                name="chevron-left"
+                                                size={24}
+                                                color="#FFFFFF"
+                                                style={[
+                                                    currentAnnouncementIndex === 0 && styles.paginationArrowDisabled
+                                                ]}
+                                            />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => setCurrentAnnouncementIndex(prev =>
+                                                prev + 3 < (schoolData?.announcements?.length || 0) ? prev + 3 : prev
+                                            )}
+                                            disabled={currentAnnouncementIndex + 3 >= (schoolData?.announcements?.length || 0)}
+                                            style={styles.paginationButton}
+                                        >
+                                            <Icon
+                                                name="chevron-right"
+                                                size={24}
+                                                color="#FFFFFF"
+                                                style={[
+                                                    (currentAnnouncementIndex + 3 >= (schoolData?.announcements?.length || 0)) &&
+                                                    styles.paginationArrowDisabled
+                                                ]}
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
                             </View>
                         </View>
                         {schoolData?.announcements?.slice(currentAnnouncementIndex, currentAnnouncementIndex + 3).map((announcement, index) => (
@@ -423,7 +425,7 @@ const SchoolDashboardScreen: React.FC = () => {
                             </View>
                         )}
                     </View>
-                </Card>
+          
 
                 <Card title="School Information">
                     <DetailRow label="School Code" value={schoolData?.schoolCode} />
@@ -704,7 +706,7 @@ const styles = StyleSheet.create({
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     announcementsContainer: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#3497A3',
         borderRadius: 8,
         padding: 16,
     },
@@ -717,15 +719,15 @@ const styles = StyleSheet.create({
     announcementTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#333333',
+        color: '#FFFFFF',
     },
     paginationControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8, // Add space between arrows
+        gap: 8,
     },
     paginationButton: {
-        padding: 8, // Add padding for better touch area
+        padding: 8,
     },
     paginationArrowDisabled: {
         opacity: 0.3,

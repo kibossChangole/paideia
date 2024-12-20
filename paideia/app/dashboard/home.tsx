@@ -213,9 +213,7 @@ export default function StudentDashboard() {
             <View style={styles.content}>
                 <ProfileCard />
 
-                <Card>
-               
-        
+          
                         <View style={styles.announcementsContainer}>
                             <View style={styles.announcementHeader}>
                                 <ThemedText style={styles.announcementTitle}>Latest Announcements</ThemedText>
@@ -276,7 +274,7 @@ export default function StudentDashboard() {
                             )}
                         </View>
                 
-                </Card>
+           
 
                 <Card>
                     <CardHeader>
