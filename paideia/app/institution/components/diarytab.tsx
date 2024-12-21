@@ -14,6 +14,7 @@ import {
 import { ref, child, get, set, push, getDatabase } from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
+import { Picker } from '@react-native-picker/picker';
 
 interface Student {
     id: string;
@@ -44,6 +45,24 @@ export default function DiaryTab() {
     const params = useLocalSearchParams();
     const currentGrade = Number(params.grade);
 
+
+    const today = new Date();
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+    const [selectedDay, setSelectedDay] = useState(today.getDate());
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+
+    const months = Array.from({ length: 12 }, (_, i) => ({
+        label: new Date(2024, i, 1).toLocaleString('default', { month: 'long' }),
+        value: i
+    }));
+
+    const days = Array.from(
+        { length: new Date(selectedYear, selectedMonth + 1, 0).getDate() },
+        (_, i) => i + 1
+    );
+
+    const years = Array.from({ length: 2 }, (_, i) => selectedYear - i);
+
     const [students, setStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
     const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
@@ -53,6 +72,53 @@ export default function DiaryTab() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false); // Add this line
     const [selectedStudentName, setSelectedStudentName] = useState<string>('');
+
+    //Cleanup functions and effect
+
+    const cleanupStates = () => {
+        setStudents([]);
+        setSelectedStudent(null);
+        setDiaryEntries([]);
+        setModalVisible(false);
+        setNewEntry('');
+        setNewTitle('');
+        setSelectedStudentName('');
+        setSaving(false);
+    };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            cleanupStates();
+            setLoading(true); // Only set loading true on unmount
+        };
+    }, []);
+
+    // Cleanup and fetch new students when grade changes
+    useEffect(() => {
+        cleanupStates(); // Clean up when grade changes
+        fetchStudents(); // Then fetch new students for the current grade
+    }, [currentGrade]); // Depend on currentGrade changes
+
+    // Remove grade from this useEffect since it's handled above
+    useEffect(() => {
+        if (selectedStudent) {
+            fetchDiaryEntries();
+            if (selectedStudent === 'all') {
+                setSelectedStudentName('All Students');
+            } else {
+                const student = students.find(s => s.id === selectedStudent);
+                if (student) {
+                    setSelectedStudentName(student.name);
+                }
+            }
+        }
+    }, [selectedStudent]);
+
+
+
+
+    //end of cleanup functions --  prevents data remnants when switching tabs
 
     useEffect(() => {
         fetchStudents();
@@ -71,6 +137,12 @@ export default function DiaryTab() {
             }
         }
     }, [selectedStudent]);
+
+    useEffect(() => {
+        if (selectedStudent) {
+            fetchDiaryEntries();
+        }
+    }, [selectedStudent, selectedYear, selectedMonth, selectedDay]);
 
     const fetchStudents = async () => {
         try {
@@ -109,7 +181,7 @@ export default function DiaryTab() {
         try {
             if (!selectedStudent) return;
 
-            const schoolCode = await AsyncStorage.getItem('schoolId'); // this is actually storing schoolCode
+            const schoolCode = await AsyncStorage.getItem('schoolId');
             if (!schoolCode) {
                 console.error('Missing school code');
                 Alert.alert('Error', 'Authentication failed - please login again');
@@ -117,14 +189,9 @@ export default function DiaryTab() {
             }
 
             const db = getDatabase();
-            const diaryRef = ref(db, `diary/${schoolCode}/${currentGrade}`);
-            const diarySnapshot = await get(diaryRef);
-
-            if (!diarySnapshot.exists()) {
-                await set(diaryRef, {});
-                setDiaryEntries([]);
-                return;
-            }
+            const selectedDate = new Date(selectedYear, selectedMonth, selectedDay);
+            const startOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).toISOString();
+            const endOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1).toISOString();
 
             if (selectedStudent === 'all') {
                 const allEntries: DiaryEntry[] = [];
@@ -132,39 +199,46 @@ export default function DiaryTab() {
                     const studentDiaryRef = ref(db, `diary/${schoolCode}/${currentGrade}/${student.id}`);
                     const entriesSnapshot = await get(studentDiaryRef);
 
-                    if (!entriesSnapshot.exists()) {
-                        await set(studentDiaryRef, {});
-                        continue;
+                    if (entriesSnapshot.exists()) {
+                        const entriesData = entriesSnapshot.val();
+                        const studentEntries = Object.entries(entriesData)
+                            .map(([id, data]: [string, any]) => ({
+                                id,
+                                ...data,
+                                studentName: student.name
+                            }))
+                            .filter(entry => {
+                                const entryDate = new Date(entry.date);
+                                const entryDateString = entryDate.toISOString();
+                                return entryDateString >= startOfDay && entryDateString < endOfDay;
+                            });
+                        allEntries.push(...studentEntries);
                     }
-
-                    const entriesData = entriesSnapshot.val();
-                    const studentEntries = Object.entries(entriesData).map(([id, data]: [string, any]) => ({
-                        id,
-                        ...data,
-                        studentName: student.name
-                    }));
-                    allEntries.push(...studentEntries);
                 }
                 setDiaryEntries(allEntries.sort((a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                    new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
                 ));
             } else {
                 const selectedStudentRef = ref(db, `diary/${schoolCode}/${currentGrade}/${selectedStudent}`);
                 const entriesSnapshot = await get(selectedStudentRef);
 
-                if (!entriesSnapshot.exists()) {
-                    await set(selectedStudentRef, {});
+                if (entriesSnapshot.exists()) {
+                    const entriesData = entriesSnapshot.val();
+                    const entriesArray = Object.entries(entriesData)
+                        .map(([id, data]: [string, any]) => ({
+                            id,
+                            ...data
+                        }))
+                        .filter(entry => {
+                            const entryDate = new Date(entry.date);
+                            const entryDateString = entryDate.toISOString();
+                            return entryDateString >= startOfDay && entryDateString < endOfDay;
+                        })
+                        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+                    setDiaryEntries(entriesArray);
+                } else {
                     setDiaryEntries([]);
-                    return;
                 }
-
-                const entriesData = entriesSnapshot.val();
-                const entriesArray = Object.entries(entriesData).map(([id, data]: [string, any]) => ({
-                    id,
-                    ...data
-                })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-                setDiaryEntries(entriesArray);
             }
         } catch (error) {
             console.error('Error fetching diary entries:', error);
@@ -187,27 +261,22 @@ export default function DiaryTab() {
 
             setSaving(true);
             const db = getDatabase();
+            const selectedDate = new Date(selectedYear, selectedMonth, selectedDay);
+
             const newEntryData = {
                 content: newEntry.trim(),
                 title: newTitle.trim(),
-                date: new Date().toISOString(),
+                date: selectedDate.toISOString(),
                 author: "Teacher",
-                submittedAt: new Date().toISOString() // Added to match your timestamp pattern
+                submittedAt: new Date().toISOString()
             };
 
-            const diaryRef = ref(db, `diary/${schoolCode}/${currentGrade}`);
-            const diarySnapshot = await get(diaryRef);
-
-            if (!diarySnapshot.exists()) {
-                await set(diaryRef, {});
-            }
-
             if (selectedStudent === 'all') {
-                // Handle batch updates differently
+                // Handle batch updates for all students
                 for (const student of students) {
                     try {
                         const studentDiaryRef = ref(db, `diary/${schoolCode}/${currentGrade}/${student.id}`);
-                        // Push directly to each student's diary instead of using batch update
+                        // Push directly to each student's diary
                         await push(studentDiaryRef, newEntryData);
                     } catch (error) {
                         console.error(`Error adding entry for student ${student.id}:`, error);
@@ -215,7 +284,7 @@ export default function DiaryTab() {
                 }
                 Alert.alert('Success', 'Entry added to all students');
             } else {
-                // Single student update remains the same
+                // Single student update
                 const selectedStudentRef = ref(db, `diary/${schoolCode}/${currentGrade}/${selectedStudent}`);
                 const selectedStudentSnapshot = await get(selectedStudentRef);
 
@@ -236,7 +305,7 @@ export default function DiaryTab() {
             setNewEntry('');
             setNewTitle('');
             setModalVisible(false);
-            await fetchDiaryEntries();
+            await fetchDiaryEntries(); // Refresh the entries list
         } catch (error) {
             console.error('Error adding diary entry:', error);
             Alert.alert('Error', 'Failed to add diary entry. Please try again.');
@@ -244,6 +313,51 @@ export default function DiaryTab() {
             setSaving(false);
         }
     };
+
+    const renderDatePicker = () => (
+        <View style={styles.datePickerContainer}>
+            {/* Month picker on top */}
+            <View style={styles.monthPickerWrapper}>
+                <Picker
+                    selectedValue={selectedMonth}
+                    dropdownIconColor='white' 
+                    onValueChange={(value) => setSelectedMonth(value)}
+                    style={styles.monthPicker}>
+                    {months.map((month, index) => (
+                        <Picker.Item key={index} label={month.label} value={month.value} />
+                    ))}
+                </Picker>
+            </View>
+
+            {/* Day and Year pickers in a row below */}
+            <View style={styles.dayYearContainer}>
+                <View style={styles.pickerWrapper}>
+                    <Picker
+                        selectedValue={selectedDay}
+                        dropdownIconColor='white' 
+                        onValueChange={(value) => setSelectedDay(value)}
+                        style={styles.picker}>
+                        {days.map((day) => (
+                            <Picker.Item key={day} label={day.toString()} value={day} />
+                        ))}
+                    </Picker>
+                </View>
+
+                <View style={styles.pickerWrapper}>
+                    <Picker
+                        selectedValue={selectedYear}
+                        dropdownIconColor='white' 
+                        onValueChange={(value) => setSelectedYear(value)}
+                        style={styles.picker}>
+                        {years.map((year) => (
+                            <Picker.Item key={year} label={year.toString()} value={year} />
+                        ))}
+                    </Picker>
+                </View>
+            </View>
+        </View>
+    );
+
 
     if (loading) {
         return (
@@ -255,6 +369,7 @@ export default function DiaryTab() {
 
     return (
         <View style={styles.container}>
+            {renderDatePicker()}
             <View style={styles.splitContainer}>
                 <ScrollView style={styles.studentList}>
                     <TouchableOpacity
@@ -373,6 +488,48 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#3497A3'
+    },
+    datePickerContainer: {
+        marginTop: 0,
+        padding: 0,
+        backgroundColor: '#3497A3',
+        borderBottomWidth: 0,
+        borderBottomColor: '#3497A3',
+    },
+    monthPickerWrapper: {
+        marginBottom: 0,
+
+        backgroundColor: '#3497A3',
+        borderRadius: 0,
+        borderWidth: 0,
+        borderColor: '#E0E0E0',
+        overflow: 'hidden',
+    },
+    monthPicker: {
+        height: 60,
+        backgroundColor: '#3497A3',
+        color: '#FFFFFF',
+    },
+    dayYearContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    pickerWrapper: {
+        flex: 1,
+        marginHorizontal: 0,
+        backgroundColor: '#3497A3',
+        borderRadius: 0,
+        borderBottomWidth: 1,
+        borderRightWidth: 0.3,
+        borderTopWidth: 0.7,
+        borderColor: '#E0E0E0',
+        overflow: 'hidden',
+
+    },
+    picker: {
+        height: 60,
+        backgroundColor: '#3497A3',
+        color: '#FFFFFF',
     },
     buttonText: {
         color: '#FFFFFF',

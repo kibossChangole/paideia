@@ -9,12 +9,12 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 const subjects = [
-    { id: 'eng', name: 'English', color: '#C71585' },
-    { id: 'math', name: 'Maths', color: '#87CEEB' },
-    { id: 'kis', name: 'Kiswahili', color: '#F4A460' },
-    { id: 'sci', name: 'Science', color: '#228B22' },
-    { id: 'sst', name: 'Social Studies', color: '#DC143C' },
-    { id: 'rel', name: 'Religion', color: '#DAA520' }
+    { id: 'eng', name: 'English', color: '#3497A3' },
+    { id: 'math', name: 'Maths', color: '#3497A3' },
+    { id: 'kis', name: 'Kiswahili', color: '#3497A3' },
+    { id: 'sci', name: 'Science', color: '#3497A3' },
+    { id: 'sst', name: 'Social Studies', color: '#3497A3' },
+    { id: 'rel', name: 'Religion', color: '#3497A3' }
 ];
 
 export default function GradesTab() {
@@ -54,29 +54,34 @@ export default function GradesTab() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
-        padding: 16,
+        backgroundColor: '#3497A3',
+        padding: 0,
     },
     header: {
         fontSize: 16,
         fontWeight: '900',
-        marginBottom: 20,
+        marginBottom: 0,
         color: '#3497A3',
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     grid: {
+        
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        gap: 14,
+        gap: 0,
     },
     subjectCard: {
-        width: '48%',
+        width: '50%',
         aspectRatio: 1,
-        borderRadius: 12,
-        padding: 1,
+        borderRadius: 0,
+        borderRightWidth:0.3,
+        borderBottomWidth: 0.7,
+        borderColor:'#FFFFFF',
+        padding: 0,
         justifyContent: 'center',
         alignItems: 'center',
+        /*
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -87,13 +92,15 @@ const styles = StyleSheet.create({
             android: {
                 elevation: 3,
             },
+            
         }),
+        */
     },
     subjectText: {
         fontSize: 18,
         width:'80%',
-        borderWidth:2,
-        borderRadius:30,
+        borderWidth:0,
+        borderRadius:0,
         borderColor:'#FFFFFF', 
         fontWeight: '900',
         padding:10,
