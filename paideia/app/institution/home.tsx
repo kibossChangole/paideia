@@ -453,7 +453,7 @@ const SchoolDashboardScreen: React.FC = () => {
                 style={styles.fab}
                 onPress={() => setIsModalVisible(true)}
             >
-                <Icon name="radio" size={24} color="#FFFFFF" />
+                <Icon name="radio" size={24} color="#3497A3" />
             </TouchableOpacity>
         </View>
     );
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 20,
         bottom: 20,
-        backgroundColor: '#3497A3',
+        backgroundColor: '#FFFFFF',
         width: 56,
         height: 56,
         borderRadius: 28,

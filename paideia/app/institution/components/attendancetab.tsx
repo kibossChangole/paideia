@@ -6,10 +6,12 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
-    ActivityIndicator
+    ActivityIndicator,
+    TextInput,
+    Modal,
+    Alert
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import { ref, child, get, set, getDatabase } from 'firebase/database';
+import { ref, child, get, set, push, getDatabase } from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 
@@ -20,47 +22,46 @@ interface Student {
     schoolCode: string;
 }
 
-interface AttendanceRecord {
-    [key: string]: {
-        [studentId: string]: boolean;
-    };
+interface DiaryEntry {
+    id: string;
+    content: string;
+    date: string;
+    teacherId: string;
+    title: string;
+    studentName?: string;
 }
 
-export default function AttendanceTab() {
+export default function DiaryTab() {
     const params = useLocalSearchParams();
     const currentGrade = Number(params.grade);
 
-    // Get current date for default values
-    const today = new Date();
-    const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-    const [selectedDay, setSelectedDay] = useState(today.getDate());
-    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
-
     const [students, setStudents] = useState<Student[]>([]);
+    const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+    const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [newEntry, setNewEntry] = useState('');
+    const [newTitle, setNewTitle] = useState('');
     const [loading, setLoading] = useState(true);
-    const [attendanceRecords, setAttendanceRecords] = useState<{ [key: string]: boolean }>({});
     const [saving, setSaving] = useState(false);
-
-    // Generate arrays for dropdowns
-    const months = Array.from({ length: 12 }, (_, i) => ({
-        label: new Date(2024, i, 1).toLocaleString('default', { month: 'long' }),
-        value: i
-    }));
-
-    const days = Array.from(
-        { length: new Date(selectedYear, selectedMonth + 1, 0).getDate() },
-        (_, i) => i + 1
-    );
-
-    const years = Array.from({ length: 2 }, (_, i) => selectedYear - i);
+    const [selectedStudentName, setSelectedStudentName] = useState<string>('');
 
     useEffect(() => {
         fetchStudents();
     }, [currentGrade]);
 
     useEffect(() => {
-        fetchAttendanceForDate();
-    }, [selectedYear, selectedMonth, selectedDay]);
+        if (selectedStudent) {
+            fetchDiaryEntries();
+            if (selectedStudent === 'all') {
+                setSelectedStudentName('All Students');
+            } else {
+                const student = students.find(s => s.id === selectedStudent);
+                if (student) {
+                    setSelectedStudentName(student.name);
+                }
+            }
+        }
+    }, [selectedStudent]);
 
     const fetchStudents = async () => {
         try {
@@ -93,42 +94,103 @@ export default function AttendanceTab() {
         }
     };
 
-    const fetchAttendanceForDate = async () => {
+    const fetchDiaryEntries = async () => {
         try {
+            if (!selectedStudent) return;
+
             const schoolId = await AsyncStorage.getItem('schoolId');
             if (!schoolId) return;
 
-            const dateKey = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}-${selectedDay.toString().padStart(2, '0')}`;
             const dbRef = ref(getDatabase());
-            const attendanceSnapshot = await get(child(dbRef, `attendance/${schoolId}/${currentGrade}/${dateKey}`));
 
-            if (attendanceSnapshot.exists()) {
-                setAttendanceRecords(attendanceSnapshot.val());
+            if (selectedStudent === 'all') {
+                const allEntries: DiaryEntry[] = [];
+                for (const student of students) {
+                    const entriesSnapshot = await get(child(dbRef, `diary/${schoolId}/${currentGrade}/${student.id}`));
+                    if (entriesSnapshot.exists()) {
+                        const entriesData = entriesSnapshot.val();
+                        const studentEntries = Object.entries(entriesData).map(([id, data]: [string, any]) => ({
+                            id,
+                            ...data,
+                            studentName: student.name
+                        }));
+                        allEntries.push(...studentEntries);
+                    }
+                }
+                setDiaryEntries(allEntries.sort((a, b) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                ));
             } else {
-                setAttendanceRecords({});
+                const entriesSnapshot = await get(child(dbRef, `diary/${schoolId}/${currentGrade}/${selectedStudent}`));
+                if (entriesSnapshot.exists()) {
+                    const entriesData = entriesSnapshot.val();
+                    const entriesArray = Object.entries(entriesData).map(([id, data]: [string, any]) => ({
+                        id,
+                        ...data
+                    })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                    setDiaryEntries(entriesArray);
+                } else {
+                    setDiaryEntries([]);
+                }
             }
         } catch (error) {
-            console.error('Error fetching attendance:', error);
+            console.error('Error fetching diary entries:', error);
         }
     };
 
-    const toggleAttendance = async (studentId: string) => {
+    const addDiaryEntry = async () => {
         try {
-            setSaving(true);
-            const schoolId = await AsyncStorage.getItem('schoolId');
-            if (!schoolId) return;
+            if (!selectedStudent || !newEntry.trim() || !newTitle.trim()) {
+                Alert.alert('Error', 'Please fill in both title and content');
+                return;
+            }
 
-            const dateKey = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}-${selectedDay.toString().padStart(2, '0')}`;
-            const newAttendance = {
-                ...attendanceRecords,
-                [studentId]: !attendanceRecords[studentId]
+            const schoolId = await AsyncStorage.getItem('schoolId');
+            const teacherId = await AsyncStorage.getItem('userId');
+            if (!schoolId || !teacherId) {
+                Alert.alert('Error', 'Authentication error');
+                return;
+            }
+
+            setSaving(true);
+            const db = getDatabase();
+            const newEntryData = {
+                content: newEntry.trim(),
+                title: newTitle.trim(),
+                date: new Date().toISOString(),
+                teacherId
             };
 
-            const dbRef = ref(getDatabase());
-            await set(child(dbRef, `attendance/${schoolId}/${currentGrade}/${dateKey}`), newAttendance);
-            setAttendanceRecords(newAttendance);
+            if (selectedStudent === 'all') {
+                // Create a batch update object
+                const updates = {};
+
+                // For each student, create a new entry under their diary path
+                for (const student of students) {
+                    const newEntryKey = push(ref(db, `diary/${schoolId}/${currentGrade}/${student.id}`)).key;
+                    if (newEntryKey) {
+                        updates[`/diary/${schoolId}/${currentGrade}/${student.id}/${newEntryKey}`] = newEntryData;
+                    }
+                }
+
+                // Perform the batch update
+                await set(ref(db), { ...updates });
+                Alert.alert('Success', 'Entry added to all students');
+            } else {
+                // Add entry for single student using push
+                const diaryRef = ref(db, `diary/${schoolId}/${currentGrade}/${selectedStudent}`);
+                await push(diaryRef, newEntryData);
+                Alert.alert('Success', 'Entry added successfully');
+            }
+
+            setNewEntry('');
+            setNewTitle('');
+            setModalVisible(false);
+            await fetchDiaryEntries();
         } catch (error) {
-            console.error('Error updating attendance:', error);
+            console.error('Error adding diary entry:', error);
+            Alert.alert('Error', 'Failed to add diary entry');
         } finally {
             setSaving(false);
         }
@@ -144,59 +206,119 @@ export default function AttendanceTab() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.datePickerContainer}>
-                <View style={styles.pickerWrapper}>
-                    <Picker
-                        selectedValue={selectedMonth}
-                        onValueChange={(value) => setSelectedMonth(value)}
-                        style={styles.picker}>
-                        {months.map((month, index) => (
-                            <Picker.Item key={index} label={month.label} value={month.value} />
-                        ))}
-                    </Picker>
-                </View>
+            <View style={styles.splitContainer}>
+                <ScrollView style={styles.studentList}>
+                    <TouchableOpacity
+                        style={[
+                            styles.studentRow,
+                            selectedStudent === 'all' && styles.selectedStudent,
+                            styles.allStudentsRow
+                        ]}
+                        onPress={() => setSelectedStudent('all')}
+                    >
+                        <Text style={styles.studentName}>All Students</Text>
+                    </TouchableOpacity>
+                    {students.map((student) => (
+                        <TouchableOpacity
+                            key={student.id}
+                            style={[
+                                styles.studentRow,
+                                selectedStudent === student.id && styles.selectedStudent
+                            ]}
+                            onPress={() => setSelectedStudent(student.id)}
+                        >
+                            <Text style={styles.studentName}>{student.name}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
 
-                <View style={styles.pickerWrapper}>
-                    <Picker
-                        selectedValue={selectedDay}
-                        onValueChange={(value) => setSelectedDay(value)}
-                        style={styles.picker}>
-                        {days.map((day) => (
-                            <Picker.Item key={day} label={day.toString()} value={day} />
-                        ))}
-                    </Picker>
-                </View>
-
-                <View style={styles.pickerWrapper}>
-                    <Picker
-                        selectedValue={selectedYear}
-                        onValueChange={(value) => setSelectedYear(value)}
-                        style={styles.picker}>
-                        {years.map((year) => (
-                            <Picker.Item key={year} label={year.toString()} value={year} />
-                        ))}
-                    </Picker>
+                <View style={styles.diaryContainer}>
+                    {selectedStudent ? (
+                        <>
+                            <View style={styles.diaryHeader}>
+                                <Text style={styles.diaryHeaderText}>
+                                    {selectedStudentName}'s Diary
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.addButton}
+                                    onPress={() => setModalVisible(true)}
+                                    disabled={saving}
+                                >
+                                    <Text style={styles.addButtonText}>+ New Entry</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView style={styles.entriesList}>
+                                {diaryEntries.map((entry) => (
+                                    <View key={entry.id} style={styles.entryCard}>
+                                        {selectedStudent === 'all' && (
+                                            <Text style={styles.entryStudent}>{entry.studentName}</Text>
+                                        )}
+                                        <Text style={styles.entryTitle}>{entry.title}</Text>
+                                        <Text style={styles.entryDate}>
+                                            {new Date(entry.date).toLocaleDateString()}
+                                        </Text>
+                                        <Text style={styles.entryContent}>{entry.content}</Text>
+                                    </View>
+                                ))}
+                                {diaryEntries.length === 0 && (
+                                    <Text style={styles.noEntriesText}>No diary entries yet</Text>
+                                )}
+                            </ScrollView>
+                        </>
+                    ) : (
+                        <Text style={styles.selectStudentText}>Select a student to view their diary</Text>
+                    )}
                 </View>
             </View>
 
-            <ScrollView style={styles.studentList}>
-                {students.map((student) => (
-                    <View key={student.id} style={styles.studentRow}>
-                        <Text style={styles.studentName}>{student.name}</Text>
-                        <TouchableOpacity
-                            style={[
-                                styles.checkbox,
-                                attendanceRecords[student.id] && styles.checkboxChecked
-                            ]}
-                            onPress={() => toggleAttendance(student.id)}
-                            disabled={saving}>
-                            {attendanceRecords[student.id] && (
-                                <Text style={styles.checkmark}>✓</Text>
-                            )}
-                        </TouchableOpacity>
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>New Diary Entry</Text>
+                        <TextInput
+                            style={styles.titleInput}
+                            placeholder="Entry Title"
+                            placeholderTextColor="#666"
+                            value={newTitle}
+                            onChangeText={setNewTitle}
+                        />
+                        <TextInput
+                            style={styles.contentInput}
+                            placeholder="Write your entry..."
+                            placeholderTextColor="#666"
+                            value={newEntry}
+                            onChangeText={setNewEntry}
+                            multiline
+                            textAlignVertical="top"
+                        />
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => {
+                                    setModalVisible(false);
+                                    setNewEntry('');
+                                    setNewTitle('');
+                                }}
+                                disabled={saving}
+                            >
+                                <Text style={styles.buttonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.saveButton]}
+                                onPress={addDiaryEntry}
+                                disabled={saving}
+                            >
+                                <Text style={styles.buttonText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                ))}
-            </ScrollView>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -204,40 +326,40 @@ export default function AttendanceTab() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#3497A3',
+        backgroundColor: '#3497A3'
+    },
+    buttonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+    },
+    noEntriesText: {
+        color: '#FFFFFF',
+        textAlign: 'center',
+        marginTop: 20,
+    },
+    selectStudentText: {
+        color: '#FFFFFF',
+        textAlign: 'center',
+        marginTop: 20,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-         backgroundColor: '#3497A3',
-        
-    },
-    datePickerContainer: {
-        marginTop:15,
-        flexDirection: 'row',
-        padding: 15,
         backgroundColor: '#3497A3',
-        borderBottomWidth: 10,
-        borderBottomColor: '#3497A3',
     },
-    pickerWrapper: {
+    splitContainer: {
         flex: 1,
-        marginHorizontal: 1.5,
-         backgroundColor: '#3497A3',
-        borderRadius: 0,
-        
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        overflow: 'hidden',
-    },
-    picker: {
-        height: 60,
-        backgroundColor: '#3497A3',
-        color: '#FFFFFF',
+        flexDirection: 'row',
     },
     studentList: {
         flex: 1,
+        borderRightWidth: 1,
+        borderRightColor: '#FFFFFF',
+    },
+    diaryContainer: {
+        flex: 2,
+        backgroundColor: '#3497A3',
     },
     studentRow: {
         flexDirection: 'row',
@@ -246,27 +368,123 @@ const styles = StyleSheet.create({
         borderBottomWidth: 0.5,
         borderBottomColor: '#F0F0F0',
     },
+    allStudentsRow: {
+        backgroundColor: '#2a7a84',
+        borderBottomWidth: 2,
+        borderBottomColor: '#FFFFFF',
+    },
+    selectedStudent: {
+        backgroundColor: '#2a7a84',
+    },
     studentName: {
         flex: 1,
         fontSize: 16,
         color: '#FFFFFF',
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderWidth: 2,
-        borderColor: '#FFFFFF',
-        borderRadius: 4,
+    diaryHeader: {
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#FFFFFF',
+    },
+    diaryHeaderText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#FFFFFF',
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+        marginBottom: 10,
+    },
+    addButton: {
+        backgroundColor: '#2a7a84',
+        padding: 8,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    addButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+    },
+    entriesList: {
+        flex: 1,
+        padding: 16,
+    },
+    entryCard: {
+        backgroundColor: '#2a7a84',
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 16,
+    },
+    entryStudent: {
+        fontSize: 14,
+        color: '#E0E0E0',
+        marginBottom: 4,
+    },
+    entryTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
+        marginBottom: 4,
+    },
+    entryDate: {
+        fontSize: 12,
+        color: '#E0E0E0',
+        marginBottom: 8,
+    },
+    entryContent: {
+        color: '#FFFFFF',
+        lineHeight: 20,
+    },
+    modalContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
-    checkboxChecked: {
-        backgroundColor: '#3497A3',
+    modalContent: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        padding: 20,
+        width: '80%',
+        maxHeight: '80%',
     },
-    checkmark: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    }
-});
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 16,
+        color: '#333',
+    },
+        titleInput: {
+            borderWidth: 1,
+            borderColor: '#E0E0E0',
+            borderRadius: 4,
+            padding: 8,
+            marginBottom: 16,
+            color: '#333',
+        },
+        contentInput: {
+            borderWidth: 1,
+            borderColor: '#E0E0E0',
+            borderRadius: 4,
+            padding: 8,
+            marginBottom: 16,
+            minHeight: 120,
+            color: '#333',
+        },
+        modalButtons: {
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+        },
+        modalButton: {
+            padding: 8,
+            borderRadius: 4,
+            marginLeft: 8,
+            minWidth: 80,
+            alignItems: 'center',
+        },
+        cancelButton: {
+            backgroundColor: '#999',
+        },
+        saveButton: {
+            backgroundColor: '#3497A3'
+        },
+    });

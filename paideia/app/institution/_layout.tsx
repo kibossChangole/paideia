@@ -123,6 +123,13 @@ export default function DashboardLayout() {
                     href: null,
                 }}
             />
+
+            <Tabs.Screen
+                name="components/diarytab"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
         
     );

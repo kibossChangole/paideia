@@ -16,6 +16,7 @@ type Student = {
     guardianContact: string;
     region: string;
     schoolCode: string;
+    grade: number;  // Add this line
     feeStructure: number;
     submittedAt: string;
     documentation: string;
@@ -86,6 +87,9 @@ export default function StudentDashboard() {
         }
     };
 
+    const [lastSeenDate, setLastSeenDate] = useState<string>('Loading...');
+
+    // Modify your fetchUserData function
     const fetchUserData = async () => {
         try {
             const studentId = await AsyncStorage.getItem('studentId');
@@ -108,7 +112,11 @@ export default function StudentDashboard() {
                 if (student) {
                     setStudentData(student);
                     fetchSchoolName(student.schoolCode);
-                    fetchAnnouncements(student.schoolCode); 
+                    fetchAnnouncements(student.schoolCode);
+
+                    // Add this: Fetch last seen date
+                    const lastSeen = await getLastSeenDate(studentId, student.schoolCode, student.grade);
+                    setLastSeenDate(lastSeen);
                 } else {
                     setError('Student not found');
                     router.push('/');
@@ -148,6 +156,33 @@ export default function StudentDashboard() {
         }
     };
 
+    const getLastSeenDate = async (studentId: string, schoolCode: string, grade: number) => {
+        try {
+            const dbRef = ref(getDatabase());
+            const attendanceRef = child(dbRef, `attendance/${schoolCode}/${grade}`);
+            const snapshot = await get(attendanceRef);
+
+            if (snapshot.exists()) {
+                const attendanceData = snapshot.val();
+                // Get all dates and sort them in descending order
+                const dates = Object.keys(attendanceData).sort((a, b) =>
+                    new Date(b).getTime() - new Date(a).getTime()
+                );
+
+                // Find the most recent date where the student was present
+                const lastSeenDate = dates.find(date =>
+                    attendanceData[date][studentId] === true
+                );
+
+                return lastSeenDate ? new Date(lastSeenDate).toLocaleDateString() : 'No attendance record';
+            }
+            return 'No attendance record';
+        } catch (error) {
+            console.error('Error fetching last seen date:', error);
+            return 'Error fetching attendance';
+        }
+    };
+
     useEffect(() => {
         fetchUserData();
     }, []);
@@ -174,28 +209,30 @@ export default function StudentDashboard() {
     }
 
     const ProfileCard = () => (
-    
-                <View style={styles.profileHeader}>
-                    <View style={styles.imageContainer}>
-                        <Image
-                            source={{ uri: "https://cdn.pixabay.com/photo/2020/10/16/05/41/student-5658577_1280.png" }}
-                            style={styles.schoolImage}
-                        />
-                    </View>
-                    <View style={styles.profileInfo}>
-                        <ThemedText style={styles.profileName}>
-                            {studentData?.name}
-                        </ThemedText>
-                        <View style={styles.statusContainer}>
-                            <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
-                                <ThemedText style={[styles.statusText, { color: '#2E7D32' }]}>
-                                    Active Student
-                                </ThemedText>
-                            </View>
-                        </View>
-                    </View>
+        <View style={styles.profileHeader}>
+            <View style={styles.imageContainer}>
+                <Image
+                    source={{ uri: "https://cdn.pixabay.com/photo/2020/10/16/05/41/student-5658577_1280.png" }}
+                    style={styles.schoolImage}
+                />
+            </View>
+            <View style={styles.profileInfo}>
+                <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
+                    <ThemedText style={[styles.statusText, { color: '#2E7D32' }]}>
+                        Active Student
+                    </ThemedText>
                 </View>
-        
+                <ThemedText style={styles.profileName}>
+                    {studentData?.name}
+                </ThemedText>
+                <View style={styles.statusContainer}>
+                   
+                    <ThemedText style={styles.lastSeenText}>
+                        Last seen: {lastSeenDate}
+                    </ThemedText>
+                </View>
+            </View>
+        </View>
     );
 
     return (
@@ -370,6 +407,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#3497A3',
         position: 'relative',
     },
+
+    lastSeenText: {
+        fontSize: 12,
+        color: '#FFFFFF',
+        marginTop: 8,
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+        opacity: 0.9,
+    },
     imageContainer: {
         width: 100,
         height: 100,
@@ -396,28 +441,29 @@ const styles = StyleSheet.create({
     profileInfo: {
         flex: 1,
         
-        paddingTop: 8,
+        paddingTop: 6,
     },
     profileName: {
         fontSize: 24,
         fontWeight: '700',
         color: '#FFFFFF',
-        marginBottom: 4,
+        marginBottom: 0,
+        marginTop: 12,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     statusContainer: {
         backgroundColor: 'transparent',
-        marginTop: 4,
+        marginTop: 1,
     },
     statusBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        paddingHorizontal: 5,
+        paddingVertical: 2,
         borderRadius: 12,
         alignSelf: 'flex-start',
         marginTop: 2,
     },
     statusText: {
-        fontSize: 12,
+        fontSize: 8,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
         fontWeight: '500',
         letterSpacing: 0.2,

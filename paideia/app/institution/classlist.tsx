@@ -15,6 +15,7 @@ import { ref, child, get, getDatabase } from 'firebase/database';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AttendanceTab from './components/attendancetab';
 import GradesTab from './components/gradestab';
+import DiaryTab from './components/diarytab';
 
 interface Student {
     id: string;
@@ -31,7 +32,7 @@ interface Student {
     submittedAt: string;
 }
 
-type TabType = 'students' | 'attendance' | 'grades';
+type TabType = 'students' | 'attendance' | 'grades' | 'diary';
 
 export default function ClassList() {
     const router = useRouter();
@@ -116,6 +117,8 @@ const [activeTab, setActiveTab] = useState<TabType>(initialTab);
                 return <AttendanceTab currentGrade={currentGrade} />;
             case 'grades':
                 return <GradesTab currentGrade={currentGrade} />;
+            case 'diary':
+                return <DiaryTab currentGrade={currentGrade} />;
         }
     };
 
@@ -155,7 +158,7 @@ const [activeTab, setActiveTab] = useState<TabType>(initialTab);
             </View>
 
             <View style={styles.tabContainer}>
-                {(['students', 'attendance', 'grades'] as TabType[]).map((tab) => (
+                {(['students', 'attendance', 'grades', 'diary'] as TabType[]).map((tab) => (
                     <TouchableOpacity
                         key={tab}
                         style={[
