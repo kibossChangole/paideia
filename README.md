@@ -71,6 +71,6 @@ src/
 
 ---<br><br>
 
-## Conclusion<br>
+## Summary<br>
 The **Paideia School Management System** provides an innovative approach to solving administrative challenges in educational institutions. Its modular design ensures scalability, security, and performance, making it a future-ready platform for school management【8:19†Paideia Project.docx】.<br><br>
 
