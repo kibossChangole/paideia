@@ -85,12 +85,36 @@ src/
 ---<br><br>
 
 ## Screenshots<br>
-### Home Screen<br>
-![Home Screen](path-to-home-screen-image)<br><br>
-### Student Dashboard<br>
-![Student Dashboard](path-to-student-dashboard-image)<br><br>
+### Splash<br>
+![Screenshot_20250107_041411_paideia](https://github.com/user-attachments/assets/ab5f63a8-68dd-4976-99ac-7c53bdebcbb5)
+<br><br>
+### Login<br>
+![Screenshot_20250107_041418_paideia](https://github.com/user-attachments/assets/68a28363-5ecb-44aa-a286-0f04a77c7738)
+
+<br><br>
+### Dashboards<br>
+![Screenshot_20250107_050829_paideia](https://github.com/user-attachments/assets/55697c47-9bb4-411d-a2e7-b5c529de6e63)
+![Screenshot_20250107_050826_paideia](https://github.com/user-attachments/assets/ff938aa9-0cc2-4237-b03f-b773c6dcc3ee)
+
+<br><br>
 ### Fee Management Interface<br>
-![Fee Management](path-to-fee-management-image)<br><br>
+![Screenshot_20250107_050855_paideia](https://github.com/user-attachments/assets/772ce6a6-695c-4bb7-b420-c8de568f72dd)
+![Screenshot_20250107_041445_paideia](https://github.com/user-attachments/assets/8a5225da-94b9-42f2-acf0-9339447c165b)
+
+<br><br>
+
+### Attendance<br>
+
+![Screenshot_20250107_041453_paideia](https://github.com/user-attachments/assets/161176c9-2cde-49a9-a452-306730ca01ee)
+![Screenshot_20250107_041443_paideia](https://github.com/user-attachments/assets/fd2a9c63-461b-431e-a3ce-c65cb73a55d0)
+
+<br><br>
+
+### Grading<br>
+
+![Screenshot_20250107_050858_paideia](https://github.com/user-attachments/assets/d6751d1c-35fd-42d9-88cd-10537b1c75ef)
+![Screenshot_20250107_041456_paideia](https://github.com/user-attachments/assets/56f64cd2-6335-4bad-8a2f-e8e3d72247a9)
+<br><br>
 
 ---<br><br>
 
