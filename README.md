@@ -64,6 +64,36 @@ src/
 <br><br>
 ---<br><br>
 
+## How to Run the App<br>
+1. **Clone the Repository**:<br>
+   ```bash<br>
+   git clone <repository-url><br>
+   cd <repository-folder><br>
+   ```<br>
+2. **Install Dependencies**:<br>
+   ```bash<br>
+   npm install<br>
+   ```<br>
+3. **Start the Development Server**:<br>
+   ```bash<br>
+   npx expo start<br>
+   ```<br>
+4. **Run on Emulator or Physical Device**:<br>
+   - Scan the QR code using the Expo Go app (iOS/Android).<br>
+   - Use the simulator/emulator options provided in the Expo CLI dashboard.<br><br>
+
+---<br><br>
+
+## Screenshots<br>
+### Home Screen<br>
+![Home Screen](path-to-home-screen-image)<br><br>
+### Student Dashboard<br>
+![Student Dashboard](path-to-student-dashboard-image)<br><br>
+### Fee Management Interface<br>
+![Fee Management](path-to-fee-management-image)<br><br>
+
+---<br><br>
+
 ## Future Enhancements<br>
 - **AI Integration**: Predictive analytics for student performance and payment patterns.<br>
 - **Offline Mode**: Improved mobile accessibility and offline functionality【8:19†Paideia Project.docx】.<br>
