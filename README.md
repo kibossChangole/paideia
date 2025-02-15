@@ -1,7 +1,7 @@
 # Paideia School Management System<br><br>
 
 ## Overview<br>
-The **Paideia School Management System** is a React Native Expo application developed using **TypeScript**. It is designed to address the administrative and operational challenges faced by educational institutions, particularly in Kenya. Inspired by real-world issues observed at Dawnlight School, the project offers a modern solution to streamline processes such as student registration, fee management, and institutional reporting【8:0†Paideia Project.docx】.<br><br>
+The **Paideia School Management System** is a React Native Expo application developed using **TypeScript**. It is designed to address the administrative and operational challenges faced by educational institutions, particularly in Kenya.<br><br>
 
 ---<br><br>
 
@@ -10,28 +10,28 @@ The **Paideia School Management System** is a React Native Expo application deve
 ### Multi-User Interfaces<br>
 - **Student Portal**: Allows students to manage personal profiles, track academic performance, view grades, attendance, and announcements, and process fee payments seamlessly.<br>
 - **Administrator Dashboard**: Provides tools for managing student records, monitoring class distributions, tracking fee payments, and broadcasting announcements.<br>
-- **Institution Management**: Offers comprehensive oversight capabilities, including financial analytics, performance metrics, and communication tools【8:11†Paideia Project.docx】.<br><br>
+- **Institution Management**: Offers comprehensive oversight capabilities, including financial analytics, performance metrics, and communication tools.<br><br>
 
 ### Core Functionalities<br>
-- **Student Registration System**: Implements robust data validation, secure document upload, and dynamic school selection features【8:16†Paideia Project.docx】.<br>
+- **Student Registration System**: Implements robust data validation, secure document upload, and dynamic school selection features.<br>
 - **Grade and Attendance Management**: Tracks and updates student grades and attendance records, relaying this data back to students through the portal.<br>
-- **Fee Management**: Supports real-time payment tracking, automated fee reconciliation, and customizable financial reports【8:3†Paideia Project.docx】.<br>
-- **Financial Reporting**: Provides administrators with detailed financial insights and analytics to support data-driven decision-making【8:17†Paideia Project.docx】.<br>
-- **Authentication and Fee Payment**: Ensures secure user authentication and enables seamless fee payment processing with real-time updates and confirmations【8:12†Paideia Project.docx】.<br><br>
+- **Fee Management**: Supports real-time payment tracking, automated fee reconciliation, and customizable financial reports】.<br>
+- **Financial Reporting**: Provides administrators with detailed financial insights and analytics to support data-driven decision-making.<br>
+- **Authentication and Fee Payment**: Ensures secure user authentication and enables seamless fee payment processing with real-time updates and confirmations.<br><br>
 
 ---<br><br>
 
 ## Security and Data Protection<br>
 - Secure authentication with Firebase.<br>
 - Role-based access control.<br>
-- Encrypted data transmission and secure storage【8:12†Paideia Project.docx】.<br><br>
+- Encrypted data transmission and secure storage.<br><br>
 
 ---<br><br>
 
 ## Performance Optimization<br>
 - Optimized data fetching and caching for responsiveness.<br>
 - Cross-platform support with responsive layouts.<br>
-- Lazy loading and asynchronous data fetching【8:8†Paideia Project.docx】.<br><br>
+- Lazy loading and asynchronous data fetching.<br><br>
 
 ---<br><br>
 
@@ -44,7 +44,7 @@ The **Paideia School Management System** is a React Native Expo application deve
 - **Frontend**: React Native (Expo framework)<br>
 - **Backend**: Firebase for authentication, database, and storage.<br>
 - **Programming Language**: TypeScript for enhanced type safety and maintainability.<br>
-- **Testing Frameworks**: Jest and React Native Testing Library【8:12†Paideia Project.docx】.<br><br>
+- **Testing Frameworks**: Jest and React Native Testing Library.<br><br>
 
 ---<br><br>
 
