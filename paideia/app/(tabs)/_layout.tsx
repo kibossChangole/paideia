@@ -1,11 +1,18 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform, TouchableOpacity } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { Tabs } from "expo-router";
+import React from "react";
+import { Platform, TouchableOpacity, View, StyleSheet } from "react-native";
+import Animated from "react-native-reanimated";
 
-import { TabBarIcon } from '@/components/TabBarIcon';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { TabBarIcon } from "@/components/TabBarIcon";
+import { useColorScheme } from "@/hooks/useColorScheme";
+
+const COLORS = {
+  primaryTeal: "#14b8a6",
+  warmGray: "#94a3b8",
+  white: "#ffffff",
+  softBg: "#fcfcfd",
+  slate100: "#f1f5f9",
+};
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -13,34 +20,32 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colorScheme === 'dark' ? '#3497A3' : '#3497A3',
-        tabBarInactiveTintColor: colorScheme === 'dark' ? '#8E8E93' : '#8E8E93',
+        tabBarActiveTintColor: COLORS.primaryTeal,
+        tabBarInactiveTintColor: COLORS.warmGray,
         headerShown: false,
         tabBarStyle: {
-          height: Platform.OS === 'ios' ? 88 : 60,
-          backgroundColor: colorScheme === 'dark' ? '#ffffff' : '#FFFFFF',
-          borderTopWidth: 0.5,
-          borderTopColor: colorScheme === 'dark' ? '#38383A' : '#E5E5E5',
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-          paddingTop: 10,
-          elevation: 0,
-          ...Platform.select({
-            ios: {
-              shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: colorScheme === 'dark' ? 0.2 : 0.05,
-              shadowRadius: 4,
-            },
-          }),
+          position: "absolute",
+          bottom: 24,
+          left: 24,
+          right: 24,
+          height: 72,
+          backgroundColor: COLORS.white,
+          borderRadius: 24,
+          borderTopWidth: 0,
+          elevation: 5,
+          shadowColor: COLORS.primaryTeal,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          paddingBottom: 0, // Reset padding
+          alignItems: "center",
+          justifyContent: "center",
         },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-          fontWeight: '500',
-          paddingBottom: Platform.OS === 'ios' ? 0 : 4,
-        },
-        tabBarIconStyle: {
-          marginTop: 4,
+        tabBarShowLabel: false, // Hide labels for cleaner look
+        tabBarItemStyle: {
+          height: "100%",
+          justifyContent: "center",
+          alignItems: "center",
         },
         tabBarButton: (props) => (
           <TouchableOpacity
@@ -50,27 +55,30 @@ export default function TabLayout() {
               props.style,
               {
                 flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
+                alignItems: "center",
+                justifyContent: "center",
               },
             ]}
           />
         ),
-      }}>
+      }}
+    >
       {/* Login Tab */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Login',
+          title: "Login",
           tabBarIcon: ({ color, focused }) => (
             <Animated.View
-              style={{
-                opacity: focused ? 1 : 0.8,
-              }}
+              style={[
+                styles.iconContainer,
+                focused && styles.activeIconContainer,
+              ]}
             >
               <TabBarIcon
-                name={focused ? 'log-in' : 'log-in-outline'}
-                color={color}
+                name={focused ? "log-in" : "log-in-outline"}
+                color={focused ? COLORS.white : color}
+                style={{ marginBottom: 0 }}
               />
             </Animated.View>
           ),
@@ -81,16 +89,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="registration"
         options={{
-          title: 'Register',
+          title: "Register",
           tabBarIcon: ({ color, focused }) => (
             <Animated.View
-              style={{
-                opacity: focused ? 1 : 0.8,
-              }}
+              style={[
+                styles.iconContainer,
+                focused && styles.activeIconContainer,
+              ]}
             >
               <TabBarIcon
-                name={focused ? 'person-add' : 'person-add-outline'}
-                color={color}
+                name={focused ? "person-add" : "person-add-outline"}
+                color={focused ? COLORS.white : color}
+                style={{ marginBottom: 0 }}
               />
             </Animated.View>
           ),
@@ -119,7 +129,23 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-
-    
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeIconContainer: {
+    backgroundColor: COLORS.primaryTeal,
+    shadowColor: COLORS.primaryTeal,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+});
