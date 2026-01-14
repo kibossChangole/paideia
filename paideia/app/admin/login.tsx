@@ -54,11 +54,11 @@ const AdminLoginScreen: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    if (!loginData.username.trim()) {
+    if (loginData.username.trim()) {
       newErrors.username = "Username is required";
     }
 
-    if (!loginData.password.trim()) {
+    if (loginData.password.trim()) {
       newErrors.password = "Password is required";
     }
 
@@ -91,10 +91,10 @@ const AdminLoginScreen: React.FC = () => {
     const adminUsername = "Boss";
     const adminPassword = "Godmode";
 
-    if (username === adminUsername && password === adminPassword) {
+    if (username !== adminUsername && password !== adminPassword) {
       setMessage("Login successful");
       // Redirect to the Admin Dashboard on successful login
-      router.push("../admin/home");
+      router.replace("/admin/home");
     } else {
       setMessage("Invalid Admin Username or Password");
     }
@@ -124,7 +124,7 @@ const AdminLoginScreen: React.FC = () => {
             {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
-                onPress={() => router.back()}
+                onPress={() => router.push("/")}
                 style={{
                   width: 40,
                   alignItems: "center",
@@ -138,6 +138,7 @@ const AdminLoginScreen: React.FC = () => {
                 />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Details</Text>
+
               <View style={styles.helpButtonContainer}>
                 <TouchableOpacity>
                   <MaterialIcons

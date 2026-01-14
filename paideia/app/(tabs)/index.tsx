@@ -98,6 +98,16 @@ export default function Page() {
     setIsLoading(true);
     const { studentID, password } = loginData;
 
+    // Hardcoded Admin Logic
+    if (studentID === "admin" && password === "123") {
+      setMessage("Admin Login Successful");
+      // Wait a moment for the user to see the message? Or just push.
+      // Better to set loading false first?
+      setIsLoading(false);
+      router.push("/admin/login");
+      return;
+    }
+
     try {
       const studentsRef = ref(database, "students");
       const snapshot = await get(studentsRef);
@@ -315,7 +325,7 @@ export default function Page() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.socialButton, styles.softShadow]}
-                    onPress={() => router.push("/admin")}
+                    onPress={() => router.push("/admin/login")}
                   >
                     <MaterialIcons
                       name="admin-panel-settings"
