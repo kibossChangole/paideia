@@ -76,12 +76,12 @@ export default function InstitutionLayout() {
       />
 
       <Tabs.Screen
-        name="classrooms"
+        name="planner"
         options={{
-          title: "Classrooms",
+          title: "Planner",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "settings" : "settings-outline"}
+              name={focused ? "calendar" : "calendar-outline"}
               color={color}
             />
           ),
@@ -89,12 +89,12 @@ export default function InstitutionLayout() {
       />
 
       <Tabs.Screen
-        name="accounts"
+        name="settings"
         options={{
-          title: "Accounts",
+          title: "Settings",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "bar-chart" : "bar-chart-outline"}
+              name={focused ? "settings" : "settings-outline"}
               color={color}
             />
           ),
@@ -128,6 +128,12 @@ export default function InstitutionLayout() {
 
       <Tabs.Screen
         name="components/diarytab"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="termschedule"
         options={{
           href: null,
         }}
