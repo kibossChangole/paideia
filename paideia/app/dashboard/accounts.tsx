@@ -19,6 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MpesaService } from "../../services/mpesaService";
 
 // Types
 type Student = {
@@ -139,41 +140,36 @@ export default function AccountsScreen() {
     setProcessing(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Use MpesaService to initiate STK Push
+      const response = await MpesaService.initiateStkPush(
+        phoneNumber,
+        amountVal,
+        studentData.id
+      );
 
       const payment: Payment = {
         amount: amountVal,
         date: new Date().toISOString(),
-        reference: Math.random().toString(36).substring(2, 8).toUpperCase(),
-        status: "success",
+        reference: response.CheckoutRequestID, // Use CheckoutRequestID as reference
+        status: "pending", // Initially pending
       };
 
-      const newBalance = studentData.feeStructure - amountVal;
       const updates: any = {};
 
-      // Update student's fee balance
-      const studentRef = `students/${studentData.id}/feeStructure`;
-      updates[studentRef] = newBalance;
-
-      // Add payment record
+      // Add payment record as pending
       const paymentRef = `payments/${studentData.id}/${payment.reference}`;
       updates[paymentRef] = payment;
 
       await update(ref(database), updates);
 
       // Update local state
-      setStudentData({
-        ...studentData,
-        feeStructure: newBalance,
-      });
       setPayments([payment, ...payments]);
       setPayAmount("");
 
-      alert("Payment successful!");
-    } catch (error) {
+      alert("STK Push sent! Please check your phone to complete the payment.");
+    } catch (error: any) {
       console.error("Payment error:", error);
-      alert("Payment failed. Please try again.");
+      alert(error.message || "Payment failed. Please try again.");
     } finally {
       setProcessing(false);
     }
