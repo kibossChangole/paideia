@@ -28,5 +28,5 @@ export const MPESA_CONFIG = {
 
   // Callback URL (Must be a publicly accessible URL)
   // For development, you can use services like Ngrok or a backend endpoint
-  callbackUrl: "https://fb79546d2b9e.ngrok-free.app/api/webhook",
+  callbackUrl: "https://paideia-mpesa-callback.onrender.com/api/webhook",
 };
