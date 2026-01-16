@@ -6,8 +6,8 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Initialize Firebase Admin
-const serviceAccount = require('./serviceAccountKey.json');
-//const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+//const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 if (!admin.apps.length) {
     admin.initializeApp({
@@ -21,7 +21,7 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Middleware to parse JSON bodies
 app.use(express.json());
