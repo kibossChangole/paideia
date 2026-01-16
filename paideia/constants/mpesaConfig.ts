@@ -7,14 +7,17 @@
 
 export const MPESA_CONFIG = {
   // Found in 'My Apps' section of the Safaricom Developer Portal
-  consumerKey: "YOUR_CONSUMER_KEY",
-  consumerSecret: "YOUR_CONSUMER_SECRET",
+  consumerKey: process.env.EXPO_PUBLIC_MPESA_CONSUMER_KEY,
+  consumerSecret: process.env.EXPO_PUBLIC_MPESA_CONSUMER_SECRET,
 
   // For Sandbox use '174379'
-  businessShortCode: "174379",
+  businessShortCode:
+    process.env.EXPO_PUBLIC_MPESA_BUSINESS_SHORT_CODE || "174379",
 
   // For Sandbox use 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
-  passKey: "YOUR_PASSKEY",
+  passKey:
+    process.env.EXPO_PUBLIC_MPESA_PASSKEY ||
+    "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
 
   // API Endpoints
   // Sandbox tokens: https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials
@@ -25,5 +28,5 @@ export const MPESA_CONFIG = {
 
   // Callback URL (Must be a publicly accessible URL)
   // For development, you can use services like Ngrok or a backend endpoint
-  callbackUrl: "https://your-domain.com/api/mpesa/callback",
+  callbackUrl: "https://fb79546d2b9e.ngrok-free.app/api/webhook",
 };

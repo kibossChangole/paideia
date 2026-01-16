@@ -4,7 +4,7 @@
     "slug": "paideia",
     "version": "1.0.0",
     "splash": {
-      "image": "./assets/images/finalSplash.jpg",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
