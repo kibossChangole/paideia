@@ -61,6 +61,7 @@ export default function AccountsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
   const router = useRouter();
 
   // Payment Form State
@@ -243,13 +244,22 @@ export default function AccountsScreen() {
               <Text style={styles.balanceLabel}>Outstanding Balance</Text>
               <View style={styles.balanceRow}>
                 <Text style={styles.currencySymbol}>KES</Text>
-                <Text style={styles.balanceAmount}>
+                <Text
+                  style={styles.balanceAmount}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
+                >
                   {studentData?.feeStructure?.toLocaleString() || "0"}
                 </Text>
               </View>
               <View style={styles.studentBadge}>
                 <View style={styles.statusDot} />
-                <Text style={styles.studentIdText}>
+                <Text
+                  style={styles.studentIdText}
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
+                >
                   Student ID: {studentData?.id || "..."}
                 </Text>
               </View>
@@ -339,14 +349,18 @@ export default function AccountsScreen() {
             <View style={styles.historySection}>
               <View style={styles.historyHeader}>
                 <Text style={styles.historyTitle}>Recent Transactions</Text>
-                <TouchableOpacity>
-                  <Text style={styles.seeAllText}>See all</Text>
-                </TouchableOpacity>
+                {payments.length > visibleCount && (
+                  <TouchableOpacity
+                    onPress={() => setVisibleCount((prev) => prev + 10)}
+                  >
+                    <Text style={styles.seeAllText}>Load more</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.transactionsList}>
                 {payments.length > 0 ? (
-                  payments.map((payment, index) => (
+                  payments.slice(0, visibleCount).map((payment, index) => (
                     <View key={index} style={styles.transactionRow}>
                       <View style={styles.transactionLeft}>
                         <View style={styles.transactionIcon}>
@@ -356,18 +370,23 @@ export default function AccountsScreen() {
                             color={COLORS.slate400}
                           />
                         </View>
-                        <View>
-                          <Text style={styles.transactionName}>
-                            Fee Payment
-                          </Text>
-                          <Text style={styles.transactionMeta}>
-                            {new Date(payment.date).toLocaleDateString()} • REF:{" "}
+                        <View style={styles.transactionTextContainer}>
+                          <Text
+                            style={styles.transactionMeta}
+                            numberOfLines={1}
+                            ellipsizeMode="middle"
+                          >
+                            {new Date(payment.date).toLocaleDateString()} •{" "}
                             {payment.reference}
                           </Text>
                         </View>
                       </View>
                       <View style={styles.transactionRight}>
-                        <Text style={styles.transactionAmount}>
+                        <Text
+                          style={styles.transactionAmount}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
                           KES {payment.amount.toLocaleString()}
                         </Text>
                         <Text
@@ -426,10 +445,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    maxWidth: 480,
-    marginHorizontal: "auto",
     width: "100%",
   },
   backButton: {
@@ -459,9 +476,8 @@ const styles = StyleSheet.create({
     paddingBottom: 96,
   },
   main: {
-    maxWidth: 480,
-    marginHorizontal: "auto",
-    paddingHorizontal: 24,
+    width: "100%",
+    paddingHorizontal: 8,
     paddingBottom: 24,
   },
 
@@ -490,10 +506,11 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   balanceAmount: {
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: "800",
     color: COLORS.slate900,
     letterSpacing: -1,
+    flexShrink: 1,
   },
   studentBadge: {
     marginTop: 16,
@@ -557,11 +574,11 @@ const styles = StyleSheet.create({
   amountInput: {
     width: "100%",
     backgroundColor: COLORS.slate50,
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingLeft: 64,
-    paddingRight: 20,
-    fontSize: 20,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingLeft: 48,
+    paddingRight: 12,
+    fontSize: 18,
     fontWeight: "700",
     color: COLORS.slate900,
   },
@@ -589,13 +606,13 @@ const styles = StyleSheet.create({
   payButton: {
     width: "100%",
     backgroundColor: COLORS.primary,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -645,9 +662,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   historyTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: "700",
     color: COLORS.slate900,
+    marginRight: 8,
   },
   seeAllText: {
     fontSize: 14,
@@ -668,12 +687,16 @@ const styles = StyleSheet.create({
   transactionLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 6,
+    width: "60%",
+  },
+  transactionTextContainer: {
+    flex: 1,
   },
   transactionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.slate50,
     alignItems: "center",
     justifyContent: "center",
@@ -690,11 +713,14 @@ const styles = StyleSheet.create({
   },
   transactionRight: {
     alignItems: "flex-end",
+    width: "40%",
+    paddingLeft: 4,
   },
   transactionAmount: {
     fontSize: 14,
     fontWeight: "700",
     color: COLORS.slate900,
+    textAlign: "right",
   },
   transactionStatus: {
     fontSize: 10,
