@@ -4,6 +4,10 @@
  * Replace placeholders with your actual credentials from the Safaricom Developer Portal.
  * Sandbox: https://developer.safaricom.co.ke/
  */
+console.log(
+  "DEBUG: EXPO_PUBLIC_WEBHOOK_SECRET status:",
+  process.env.EXPO_PUBLIC_WEBHOOK_SECRET ? "PRESENT" : "MISSING"
+);
 
 export const MPESA_CONFIG = {
   // Found in 'My Apps' section of the Safaricom Developer Portal
