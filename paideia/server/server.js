@@ -62,31 +62,46 @@ app.post('/api/webhook', async (req, res) => {
 
 
     try {
+        console.log('📦 Raw Body Received');
+        // console.log(JSON.stringify(req.body, null, 2)); // Uncomment if you need to see full body
+
         const body = req.body.Body;
         if (!body || !body.stkCallback) {
-            console.log('❌ INVALID CALLBACK BODY');
+            console.log('❌ INVALID CALLBACK BODY structure');
             return res.status(400).json({ ResultCode: 1, ResultDesc: "Invalid body" });
         }
 
         const callbackData = body.stkCallback;
         const resultCode = callbackData.ResultCode;
-        const resultDesc = callbackData.ResultDesc;
         const checkoutRequestID = callbackData.CheckoutRequestID;
 
+        console.log(`🔹 Processing ID: ${checkoutRequestID} | Result: ${resultCode}`);
+
         // 2. IDEMPOTENCY: Check if already processed
+        console.log('⏳ Checking idempotency in Firebase...');
         const auditRef = db.ref(`mpesa_callbacks/${checkoutRequestID}`);
-        const auditSnap = await auditRef.once('value');
+        
+        const auditSnap = await auditRef.once('value').catch(e => {
+            console.error('🔥 Firebase Read Error:', e.message);
+            throw e;
+        });
+
+        console.log('✅ Firebase Read Done. Snap Exists:', auditSnap.exists());
+
         if (auditSnap.exists() && auditSnap.val().processedAt) {
             console.log(`♻️ SKIPPING: CheckoutID ${checkoutRequestID} already processed.`);
             return res.status(200).json({ ResultCode: 0, ResultDesc: "Duplicate" });
         }
 
         // Log raw callback immediately
+        console.log('⏳ Updating audit log...');
         await auditRef.update({
             callbackData: callbackData,
             receivedAt: new Date().toISOString(),
             status: resultCode === 0 ? 'SUCCESS' : 'FAILED'
         });
+        console.log('✅ Audit log updated.');
+
 
         if (resultCode === 0) {
             // SUCCESSFUL PAYMENT
