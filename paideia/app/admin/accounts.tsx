@@ -4,156 +4,132 @@ import {
   RefreshControl,
   ActivityIndicator,
   View,
-  ViewProps,
-  TextProps,
   StyleSheet,
   Platform,
-  Image,
+  TouchableOpacity,
+  Text,
+  Dimensions,
 } from "react-native";
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
+import {
+  MaterialIcons,
+  Ionicons,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { database } from "../(tabs)/firebaseConfig";
-import { ref, onValue, DataSnapshot } from "firebase/database";
+import { ref, onValue, DataSnapshot, get } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Circle, G, Text as SvgText } from "react-native-svg";
 
-// Card Components
-const Card: React.FC<ViewProps & { title?: string }> = ({
-  children,
-  style,
-  title,
-  ...props
-}) => (
-  <ThemedView style={[styles.card, style]} {...props}>
-    {title && (
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-    )}
-    {children}
-  </ThemedView>
-);
+const { width } = Dimensions.get("window");
 
-const CardHeader: React.FC<ViewProps> = ({ children, style, ...props }) => (
-  <ThemedView style={[styles.cardHeader, style]} {...props}>
-    {children}
-  </ThemedView>
-);
+const COLORS = {
+  primary: "#14B8A6", // Teal
+  darkTeal: "#2D6A6A", // Image button color
+  background: "#F8F9FA",
+  white: "#FFFFFF",
+  slate900: "#0f172a",
+  slate600: "#475569",
+  slate500: "#64748b",
+  slate400: "#94a3b8",
+  slate100: "#f1f5f9",
+  salmon: "#FEF2F2",
+  salmonIcon: "#EE4444",
+  amber: "#fbbf24",
+};
 
-const CardTitle: React.FC<TextProps> = ({ children, style, ...props }) => (
-  <ThemedText style={[styles.cardTitle, style]} {...props}>
-    {children}
-  </ThemedText>
-);
+type Payment = {
+  amount: number;
+  date: string;
+  reference: string;
+  status: "success" | "pending" | "failed";
+  studentId?: string;
+  studentName?: string;
+  studentGrade?: string;
+};
 
-const CardContent: React.FC<ViewProps> = ({ children, style, ...props }) => (
-  <ThemedView style={[styles.cardContent, style]} {...props}>
-    {children}
-  </ThemedView>
-);
-
-// Types
 type Student = {
   id: string;
   name: string;
-  dob: string;
-  guardianName: string;
-  guardianContact: string;
-  region: string;
-  schoolCode: string;
+  grade: string;
   feeStructure: number;
-  submittedAt: string;
+  schoolCode: string;
 };
 
-type DashboardStats = {
-  totalStudents: number;
-  totalFees: number;
-  regionBreakdown: Record<string, number>;
-  schoolCode: string | null;
-};
-
-// Main Component
-export default function HomeScreen() {
-  const [students, setStudents] = useState<Student[]>([]);
+export default function AdminAccountsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalStudents: 0,
-    totalFees: 0,
-    regionBreakdown: {},
-    schoolCode: null,
-  });
+  const [totalCollected, setTotalCollected] = useState(0);
+  const [outstandingBalance, setOutstandingBalance] = useState(0);
+  const [pendingStudentsCount, setPendingStudentsCount] = useState(0);
+  const [recentTransactions, setRecentTransactions] = useState<Payment[]>([]);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+
+  const ANNUAL_GOAL = 5000000;
 
   const fetchData = async () => {
     try {
-      // Get school ID from AsyncStorage
-      const schoolId = await AsyncStorage.getItem("schoolId");
+      const storedSchoolId = await AsyncStorage.getItem("schoolId");
+      setSchoolId(storedSchoolId);
 
-      if (!schoolId) {
-        setError("No school ID found. Please login again.");
-        setLoading(false);
-        return;
-      }
-
-      // Reference to all students
+      // Fetch Students
       const studentsRef = ref(database, "students");
+      const studentsSnap = await get(studentsRef);
+      const studentsData = studentsSnap.exists() ? studentsSnap.val() : {};
+      const allStudents = Object.values(studentsData) as Student[];
 
-      onValue(
-        studentsRef,
-        (snapshot: DataSnapshot) => {
-          const data = snapshot.val();
-          if (data) {
-            // Filter students for the specific school
-            const allStudents = Object.values(data) as Student[];
-            const schoolStudents = allStudents.filter(
-              (student) => student.schoolCode === schoolId
-            );
+      const filteredStudents = storedSchoolId
+        ? allStudents.filter((s) => s.schoolCode === storedSchoolId)
+        : allStudents;
 
-            setStudents(schoolStudents);
-
-            // Calculate stats for school-specific students
-            const stats = schoolStudents.reduce(
-              (acc, student) => ({
-                totalStudents: acc.totalStudents + 1,
-                totalFees: acc.totalFees + (student.feeStructure || 0),
-                regionBreakdown: {
-                  ...acc.regionBreakdown,
-                  [student.region]:
-                    (acc.regionBreakdown[student.region] || 0) + 1,
-                },
-                schoolCode: schoolId,
-              }),
-              {
-                totalStudents: 0,
-                totalFees: 0,
-                regionBreakdown: {} as Record<string, number>,
-                schoolCode: schoolId,
-              }
-            );
-
-            setStats(stats);
-          } else {
-            // No students found
-            setStats({
-              totalStudents: 0,
-              totalFees: 0,
-              regionBreakdown: {},
-              schoolCode: schoolId,
-            });
-          }
-          setLoading(false);
-          setRefreshing(false);
-        },
-        (error) => {
-          console.error("Error fetching data:", error);
-          setError("Error loading student data");
-          setLoading(false);
-          setRefreshing(false);
-        }
+      const totalOwed = filteredStudents.reduce(
+        (acc, s) => acc + (s.feeStructure || 0),
+        0
       );
+      const pendingCount = filteredStudents.filter(
+        (s) => s.feeStructure > 0
+      ).length;
+
+      setOutstandingBalance(totalOwed);
+      setPendingStudentsCount(pendingCount);
+
+      // Fetch Payments
+      const paymentsRef = ref(database, "payments");
+      const paymentsSnap = await get(paymentsRef);
+      const paymentsData = paymentsSnap.exists() ? paymentsSnap.val() : {};
+
+      let allPayments: Payment[] = [];
+      Object.keys(paymentsData).forEach((sId) => {
+        // Only include if student belongs to this school (if schoolId is set)
+        const student = filteredStudents.find((s) => s.id === sId);
+        if (student) {
+          const studentPayments = paymentsData[sId];
+          Object.values(studentPayments).forEach((p: any) => {
+            allPayments.push({
+              ...p,
+              studentId: sId,
+              studentName: student.name,
+              studentGrade: student.grade,
+            });
+          });
+        }
+      });
+
+      // Filter successful and sort
+      const successfulPayments = allPayments.filter(
+        (p) => p.status === "success"
+      );
+      const totalCol = successfulPayments.reduce((acc, p) => acc + p.amount, 0);
+      setTotalCollected(totalCol);
+
+      // Sort by date desc for recent list
+      allPayments.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setRecentTransactions(allPayments.slice(0, 10));
     } catch (error) {
-      console.error("Error in fetchData:", error);
-      setError("An unexpected error occurred");
+      console.error("Error fetching admin accounts data:", error);
+    } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -161,250 +137,475 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchData();
-    // Cleanup function for the database listener
-    return () => {
-      const studentsRef = ref(database, "students");
-      // Detach the listener
-      const unsubscribe = onValue(studentsRef, () => {});
-      unsubscribe();
-    };
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setError(null);
     fetchData();
   };
 
-  // Error display component
-  const ErrorDisplay = () => (
-    <ThemedView style={styles.errorContainer}>
-      <ThemedText style={styles.errorMessage}>{error}</ThemedText>
-    </ThemedView>
-  );
+  const CircularProgress = ({
+    size,
+    strokeWidth,
+    percentage,
+  }: {
+    size: number;
+    strokeWidth: number;
+    percentage: number;
+  }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Svg width={size} height={size}>
+          <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={COLORS.slate100}
+              strokeWidth={strokeWidth}
+              fill="none"
+            />
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={COLORS.darkTeal}
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              fill="none"
+            />
+          </G>
+        </Svg>
+        <View style={styles.percentageContainer}>
+          <Text style={styles.percentageText}>{Math.round(percentage)}%</Text>
+        </View>
+      </View>
+    );
+  };
 
   if (loading) {
     return (
-      <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-      </ThemedView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
     );
   }
 
-  if (error) {
-    return <ErrorDisplay />;
-  }
+  const collectedPercentage = Math.min(
+    100,
+    (totalCollected / ANNUAL_GOAL) * 100
+  );
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#3497A3"
-        />
-      }
-    >
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.imageContainer}>
-          <Image
-            source={{
-              uri: "https://cdn.pixabay.com/photo/2012/04/18/19/28/apricots-37644_1280.png",
-            }}
-            style={styles.schoolImage}
-            resizeMode="cover"
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="menu" size={28} color={COLORS.darkTeal} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Collection Overview</Text>
+        <TouchableOpacity style={styles.profileButton}>
+          <View style={styles.profileCircle}>
+            <MaterialIcons name="monetization-on" size={20} color="#B45309" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.darkTeal}
           />
-          <View style={styles.imageOverlay}>
-            <ThemedText style={styles.schoolNameOverlay}>Accounts.</ThemedText>
+        }
+      >
+        {/* Total Fees Collected Card */}
+        <View style={styles.mainCard}>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <Text style={styles.cardInfoLabel}>Total Fees Collected</Text>
+              <Text style={styles.mainAmountText}>
+                KSh {totalCollected.toLocaleString()}
+              </Text>
+              <View style={styles.goalStatusRow}>
+                <Ionicons name="trending-up" size={16} color={COLORS.primary} />
+                <Text style={styles.goalStatusText}>
+                  {Math.round(collectedPercentage)}% of Annual Goal
+                </Text>
+              </View>
+            </View>
+            <CircularProgress
+              size={80}
+              strokeWidth={8}
+              percentage={collectedPercentage}
+            />
+          </View>
+
+          <View style={styles.progressBarBackground}>
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${collectedPercentage}%` },
+              ]}
+            />
+          </View>
+
+          <View style={styles.cardFooterRow}>
+            <Text style={styles.footerLabel}>
+              TARGET: KSH {(ANNUAL_GOAL / 1000000).toFixed(0)}M
+            </Text>
+            <Text style={styles.footerLabel}>
+              REMAINING: KSH{" "}
+              {Math.max(0, ANNUAL_GOAL - totalCollected).toLocaleString()}
+            </Text>
           </View>
         </View>
-      </View>
 
-      <View style={styles.content}>
-        <Card title="Current Statistics">
-          <CardContent>
-            <View style={styles.dataRow}>
-              <ThemedText style={styles.label}>Total Students</ThemedText>
-              <ThemedText style={styles.value}>
-                {stats.totalStudents}
-              </ThemedText>
-            </View>
-            <View style={styles.dataRow}>
-              <ThemedText style={styles.label}>Total Fees</ThemedText>
-              <ThemedText style={styles.value}>
-                ${stats.totalFees.toLocaleString()}
-              </ThemedText>
-            </View>
-          </CardContent>
-        </Card>
+        {/* Total Outstanding Balance Card */}
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceIconContainer}>
+            <MaterialCommunityIcons
+              name="wallet-outline"
+              size={24}
+              color={COLORS.salmonIcon}
+            />
+          </View>
+          <View style={styles.balanceTextContainer}>
+            <Text style={styles.balanceLabel}>Total Outstanding Balance</Text>
+            <Text style={styles.balanceAmountText}>
+              KSh {outstandingBalance.toLocaleString()}
+            </Text>
+            <Text style={styles.balanceSubText}>
+              Pending from {pendingStudentsCount} students
+            </Text>
+          </View>
+        </View>
 
-        <Card title="Recent Registrations">
-          <CardContent>
-            <ScrollView style={styles.recentList}>
-              {students
-                .slice(-5)
-                .reverse()
-                .map((student) => (
-                  <View key={student.id} style={styles.dataRow}>
-                    <ThemedText style={styles.label}>{student.name}</ThemedText>
-                    <ThemedText style={styles.value}>
-                      {new Date(student.submittedAt).toLocaleDateString()}
-                    </ThemedText>
-                  </View>
-                ))}
-            </ScrollView>
-          </CardContent>
-        </Card>
+        {/* Recent M-Pesa Transactions */}
+        <View style={styles.transactionSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent M-Pesa Transactions</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
 
-        <Card title="Regional Distribution">
-          <CardContent>
-            {Object.entries(stats.regionBreakdown).map(([region, count]) => (
-              <View key={region} style={styles.dataRow}>
-                <ThemedText style={styles.label}>{region}</ThemedText>
-                <ThemedText style={styles.value}>{count} students</ThemedText>
+          <View style={styles.historyList}>
+            {recentTransactions.map((item, index) => (
+              <View key={item.reference + index} style={styles.transactionItem}>
+                <View style={styles.itemIconContainer}>
+                  <MaterialIcons
+                    name="description"
+                    size={24}
+                    color={COLORS.darkTeal}
+                  />
+                </View>
+                <View style={styles.itemMainInfo}>
+                  <Text style={styles.itemName}>
+                    {item.studentName} ({item.studentGrade || "N/A"})
+                  </Text>
+                  <Text style={styles.itemMeta}>
+                    {new Date(item.date).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                    })}{" "}
+                    • {item.reference.substring(0, 10)}
+                  </Text>
+                </View>
+                <Text style={styles.itemAmount}>
+                  KSh {item.amount.toLocaleString()}
+                </Text>
               </View>
             ))}
-          </CardContent>
-        </Card>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Export Button */}
+      <View style={styles.footerAction}>
+        <TouchableOpacity style={styles.exportButton}>
+          <MaterialCommunityIcons
+            name="file-export-outline"
+            size={24}
+            color={COLORS.white}
+          />
+          <Text style={styles.exportButtonText}>Export Financial Report</Text>
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    marginTop: 16,
-    marginHorizontal: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-    overflow: "hidden",
-  },
-  cardHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    backgroundColor: "#FFFFFF",
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333333",
-  },
-  cardContent: {
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#3497A3",
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "ios" ? 60 : 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    alignItems: "center",
-  },
-  imageContainer: {
-    width: "100%",
-    height: 300,
-    marginTop: -25,
-    backgroundColor: "transparent",
-    position: "relative",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  schoolImage: {
-    position: "absolute",
-    width: 158,
-    height: 270,
-    right: 0,
-  },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "transparent",
-    padding: Platform.OS === "ios" ? 20 : 15,
-  },
-  schoolNameOverlay: {
-    fontSize: 31,
-    padding: 10,
-    fontWeight: "700",
-    color: "#3497A3",
-    marginBottom: 8,
-    fontFamily: Platform.OS === "ios" ? "System" : "Roboto",
-  },
-  content: {
-    padding: 16,
-  },
-  dataRow: {
-    backgroundColor: "#3497A3",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#F0F0F0",
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#FFFFFF",
-    fontFamily: Platform.OS === "ios" ? "System" : "Roboto",
-    flex: 1,
-  },
-  value: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    fontWeight: "200",
-    fontFamily: Platform.OS === "ios" ? "System" : "Roboto",
-    flex: 2,
-    textAlign: "right",
-  },
-  recentList: {
-    maxHeight: 300,
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: COLORS.background,
   },
-  errorContainer: {
-    margin: 24,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  errorMessage: {
-    backgroundColor: "#FFF3F3",
-    color: "#FF3B30",
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 15,
-    textAlign: "center",
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.slate900,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#FED7AA",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profileCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFEDD5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  mainCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  cardInfoLabel: {
+    fontSize: 14,
+    color: COLORS.slate500,
+    marginBottom: 4,
+  },
+  mainAmountText: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: COLORS.darkTeal,
+    marginBottom: 8,
+  },
+  goalStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  goalStatusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  percentageContainer: {
+    position: "absolute",
+  },
+  percentageText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.darkTeal,
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: COLORS.slate100,
+    borderRadius: 4,
+    width: "100%",
+    marginBottom: 12,
     overflow: "hidden",
-    fontFamily: Platform.OS === "ios" ? "System" : "Roboto",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: COLORS.darkTeal,
+    borderRadius: 4,
+  },
+  cardFooterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  footerLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.slate400,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  balanceCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  balanceIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: COLORS.salmon,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  balanceTextContainer: {
+    flex: 1,
+  },
+  balanceLabel: {
+    fontSize: 13,
+    color: COLORS.slate500,
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  balanceAmountText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.slate900,
+    marginBottom: 2,
+  },
+  balanceSubText: {
+    fontSize: 12,
+    color: COLORS.salmonIcon,
+    fontWeight: "500",
+  },
+  transactionSection: {
+    marginTop: 32,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.slate900,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.darkTeal,
+  },
+  historyList: {
+    gap: 12,
+  },
+  transactionItem: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  itemIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  itemMainInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.slate900,
+    marginBottom: 2,
+  },
+  itemMeta: {
+    fontSize: 12,
+    color: COLORS.slate400,
+  },
+  itemAmount: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.slate900,
+  },
+  footerAction: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    backgroundColor: "rgba(248, 249, 249, 0.9)",
+  },
+  exportButton: {
+    backgroundColor: COLORS.darkTeal,
+    height: 60,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: COLORS.darkTeal,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 5,
+  },
+  exportButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
   },
 });

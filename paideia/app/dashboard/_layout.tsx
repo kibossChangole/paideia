@@ -113,7 +113,7 @@ export default function DashboardLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
-    bottom: 4,
+    bottom: 10,
     left: 20,
     right: 20,
     height: 72,
