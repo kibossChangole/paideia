@@ -29,7 +29,9 @@ app.use(express.json());
  * Receives final payment notification from Safaricom.
  */
 app.post('/api/webhook', async (req, res) => {
+    console.log('📡 Webhook Hit at:', new Date().toISOString());
     const { secret } = req.query;
+
 
     // 1. SECURITY: Verify Secret Key
     if (!secret || secret !== process.env.WEBHOOK_SECRET) {

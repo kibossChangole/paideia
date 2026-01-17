@@ -102,6 +102,11 @@ export class MpesaService {
         TransactionDesc: `School Fee Payment - ${accountReference}`,
       };
 
+      console.log(
+        "📡 Initiating STK Push with CallbackURL:",
+        MPESA_CONFIG.callbackUrl
+      );
+
       const response = await fetch(MPESA_CONFIG.stkPushUrl, {
         method: "POST",
         headers: {
