@@ -44,9 +44,21 @@ app.post('/api/webhook', async (req, res) => {
     if (!secret || secret !== expectedSecret) {
         console.log('⚠️ UNAUTHORIZED WEBHOOK ATTEMPT');
         console.log('Reason:', !secret ? 'Secret missing in URL' : 'Secret mismatch');
+        
+        // Debugging mismatch without leaking full secret
+        if (secret && expectedSecret) {
+            console.log('--- Debug Mismatch ---');
+            console.log(`Received Length: ${secret.length}`);
+            console.log(`Expected Length: ${expectedSecret.length}`);
+            console.log(`Match Start: ${secret.substring(0, 5) === expectedSecret.substring(0, 5)}`);
+            console.log(`Match End: ${secret.slice(-3) === expectedSecret.slice(-3)}`);
+            console.log('----------------------');
+        }
+
         if (!expectedSecret) console.log('CRITICAL: WEBHOOK_SECRET is NOT SET on the server!');
         return res.status(401).json({ ResultCode: 1, ResultDesc: "Unauthorized" });
     }
+
 
     try {
         const body = req.body.Body;
