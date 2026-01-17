@@ -21,6 +21,12 @@ const db = admin.database();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Debug: Check if WEBHOOK_SECRET is loaded
+console.log('-----------------------------------------');
+console.log('SECRET STATUS:', process.env.WEBHOOK_SECRET ? '✅ LOADED' : '❌ MISSING');
+console.log('PORT:', port);
+console.log('-----------------------------------------');
+
 // Middleware to parse JSON bodies
 app.use(express.json());
 
@@ -32,10 +38,13 @@ app.post('/api/webhook', async (req, res) => {
     console.log('📡 Webhook Hit at:', new Date().toISOString());
     const { secret } = req.query;
 
-
     // 1. SECURITY: Verify Secret Key
-    if (!secret || secret !== process.env.WEBHOOK_SECRET) {
+    const expectedSecret = process.env.WEBHOOK_SECRET;
+    
+    if (!secret || secret !== expectedSecret) {
         console.log('⚠️ UNAUTHORIZED WEBHOOK ATTEMPT');
+        console.log('Reason:', !secret ? 'Secret missing in URL' : 'Secret mismatch');
+        if (!expectedSecret) console.log('CRITICAL: WEBHOOK_SECRET is NOT SET on the server!');
         return res.status(401).json({ ResultCode: 1, ResultDesc: "Unauthorized" });
     }
 
