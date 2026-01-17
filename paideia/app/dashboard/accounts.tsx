@@ -160,6 +160,14 @@ export default function AccountsScreen() {
       const paymentRef = `payments/${studentData.id}/${payment.reference}`;
       updates[paymentRef] = payment;
 
+      // Add to pending_payments for O(1) lookup on server
+      const pendingRef = `pending_payments/${payment.reference}`;
+      updates[pendingRef] = {
+        studentId: studentData.id,
+        amount: amountVal,
+        createdAt: new Date().toISOString(),
+      };
+
       await update(ref(database), updates);
 
       // Update local state

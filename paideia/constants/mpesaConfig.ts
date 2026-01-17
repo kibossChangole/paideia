@@ -28,5 +28,8 @@ export const MPESA_CONFIG = {
 
   // Callback URL (Must be a publicly accessible URL)
   // For development, you can use services like Ngrok or a backend endpoint
-  callbackUrl: "https://paideia-mpesa-callback.onrender.com/api/webhook",
+  callbackUrl:
+    "https://paideia-mpesa-callback.onrender.com/api/webhook?secret=paideia_secure_2026_webhook_key",
 };
+
+//visit this site https://paideia-mpesa-callback.onrender.com to cold start the server. Render has a free tier that sleeps after 15 minutes of inactivity.

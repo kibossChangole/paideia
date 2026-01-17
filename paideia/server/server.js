@@ -6,7 +6,6 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Initialize Firebase Admin
-//const serviceAccount = require('./serviceAccountKey.json');
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 if (!admin.apps.length) {
@@ -19,7 +18,6 @@ if (!admin.apps.length) {
 }
 
 const db = admin.database();
-
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -28,13 +26,16 @@ app.use(express.json());
 
 /**
  * M-Pesa Callback Webhook
- * This endpoint will receive the final payment notification from Safaricom.
+ * Receives final payment notification from Safaricom.
  */
 app.post('/api/webhook', async (req, res) => {
-    console.log('\n=========================================');
-    console.log('--- M-PESA CALLBACK RECEIVED ---');
-    console.log('Timestamp:', new Date().toLocaleString());
-    console.log('-----------------------------------------');
+    const { secret } = req.query;
+
+    // 1. SECURITY: Verify Secret Key
+    if (!secret || secret !== process.env.WEBHOOK_SECRET) {
+        console.log('⚠️ UNAUTHORIZED WEBHOOK ATTEMPT');
+        return res.status(401).json({ ResultCode: 1, ResultDesc: "Unauthorized" });
+    }
 
     try {
         const body = req.body.Body;
@@ -46,11 +47,18 @@ app.post('/api/webhook', async (req, res) => {
         const callbackData = body.stkCallback;
         const resultCode = callbackData.ResultCode;
         const resultDesc = callbackData.ResultDesc;
-        const merchantRequestID = callbackData.MerchantRequestID;
         const checkoutRequestID = callbackData.CheckoutRequestID;
 
-        // 1. Log the raw callback to Realtime Database for audit purposes
-        await db.ref(`mpesa_callbacks/${checkoutRequestID}`).set({
+        // 2. IDEMPOTENCY: Check if already processed
+        const auditRef = db.ref(`mpesa_callbacks/${checkoutRequestID}`);
+        const auditSnap = await auditRef.once('value');
+        if (auditSnap.exists() && auditSnap.val().processedAt) {
+            console.log(`♻️ SKIPPING: CheckoutID ${checkoutRequestID} already processed.`);
+            return res.status(200).json({ ResultCode: 0, ResultDesc: "Duplicate" });
+        }
+
+        // Log raw callback immediately
+        await auditRef.update({
             callbackData: callbackData,
             receivedAt: new Date().toISOString(),
             status: resultCode === 0 ? 'SUCCESS' : 'FAILED'
@@ -63,77 +71,71 @@ app.post('/api/webhook', async (req, res) => {
             const mpesaReceiptNumber = metaData.find(item => item.Name === 'MpesaReceiptNumber').Value;
             const phoneNumber = metaData.find(item => item.Name === 'PhoneNumber').Value;
 
-            console.log('✅ PAYMENT SUCCESS');
-            console.log(`Amount: KES ${amount}`);
-            console.log(`Receipt: ${mpesaReceiptNumber}`);
-            console.log(`Phone: ${phoneNumber}`);
-            console.log(`CheckoutID: ${checkoutRequestID}`);
+            console.log(`✅ PAYMENT SUCCESS: KES ${amount} (Receipt: ${mpesaReceiptNumber})`);
 
-            // 2. Find the studentId by searching the payments node
-            // This is a naive search. For scale, consider a reverse index { checkoutId: studentId }
-            const paymentsSnap = await db.ref('payments').once('value');
-            let studentIdForPayment = null;
+            // 3. PERFORMANCE: O(1) Lookup
+            // We search for the studentId mapped to this checkoutRequestID
+            // Note: We'll need to ensure the App populates 'pending_payments' node
+            const pendingRef = db.ref(`pending_payments/${checkoutRequestID}`);
+            const pendingSnap = await pendingRef.once('value');
             
-            if (paymentsSnap.exists()) {
-                const allPayments = paymentsSnap.val();
-                for (const studentId in allPayments) {
-                    if (allPayments[studentId][checkoutRequestID]) {
-                        studentIdForPayment = studentId;
-                        break;
+            let studentId = null;
+            if (pendingSnap.exists()) {
+                studentId = pendingSnap.val().studentId;
+            } else {
+                // Fallback to naive search if pending node is missing (Legacy/Transition)
+                console.log('⚠️ PENDING NODE MISSING: Falling back to naive search...');
+                const paymentsSnap = await db.ref('payments').once('value');
+                if (paymentsSnap.exists()) {
+                    const allPayments = paymentsSnap.val();
+                    for (const sId in allPayments) {
+                        if (allPayments[sId][checkoutRequestID]) {
+                            studentId = sId;
+                            break;
+                        }
                     }
                 }
             }
 
-            if (studentIdForPayment) {
-                console.log(`Found Student ID: ${studentIdForPayment}`);
-
-                // 3. Update the payment record status to 'success'
-                await db.ref(`payments/${studentIdForPayment}/${checkoutRequestID}`).update({
-                    status: 'success',
-                    mpesaReceipt: mpesaReceiptNumber,
-                    paidAt: new Date().toISOString()
-                });
-
-                // 4. Update the student's balance (feeStructure)
-                const studentRef = db.ref(`students`);
-                const studentSnap = await studentRef.orderByChild('id').equalTo(studentIdForPayment).once('value');
+            if (studentId) {
+                // 4. DATA INTEGRITY: Transactional Balance Update
+                const studentQuery = db.ref('students').orderByChild('id').equalTo(studentId);
+                const studentSnap = await studentQuery.once('value');
 
                 if (studentSnap.exists()) {
                     const studentKey = Object.keys(studentSnap.val())[0];
-                    const currentBalance = studentSnap.val()[studentKey].feeStructure || 0;
-                    const newBalance = Math.max(0, currentBalance - amount);
+                    const balanceRef = db.ref(`students/${studentKey}/feeStructure`);
 
-                    await db.ref(`students/${studentKey}`).update({
-                        feeStructure: newBalance
+                    await balanceRef.transaction((currentBalance) => {
+                        if (currentBalance === null) return 0;
+                        return Math.max(0, currentBalance - amount);
                     });
-                    console.log(`Updated balance for ${studentIdForPayment}: KES ${newBalance}`);
+
+                    // 5. UPDATE RECORDS
+                    await db.ref(`payments/${studentId}/${checkoutRequestID}`).update({
+                        status: 'success',
+                        mpesaReceipt: mpesaReceiptNumber,
+                        paidAt: new Date().toISOString()
+                    });
+
+                    console.log(`Updated balance for Student ${studentId}`);
                 }
             } else {
-                console.log(`⚠️ Could not find student record for CheckoutID: ${checkoutRequestID}`);
+                console.log(`⚠️ FAILED: No student found for CheckoutID ${checkoutRequestID}`);
             }
-
-        } else {
-            // FAILED OR CANCELLED
-            console.log('❌ PAYMENT FAILED / CANCELLED');
-            console.log(`Result Code: ${resultCode}`);
-            console.log(`Description: ${resultDesc}`);
-            
-            // Optionally update the payment record to 'failed' if studentId is found
         }
+
+        // Mark as processed
+        await auditRef.update({ processedAt: new Date().toISOString() });
 
     } catch (error) {
         console.error('❌ ERROR PROCESSING CALLBACK:', error);
-        // We still return 200 to M-Pesa to avoid infinite retries if the error is on our end
     }
 
-    console.log('=========================================\n');
-
-    // M-Pesa expects a 200 OK response to stop retrying the callback
     res.status(200).json({ ResultCode: 0, ResultDesc: "Success" });
 });
 
 app.listen(port, () => {
-    console.log(`\n🚀 Webhook server is running at http://localhost:${port}`);
-    console.log(`👉 Point your Ngrok to this port: ngrok http ${port}`);
-    console.log(`👉 Your Callback URL in mpesaConfig.ts should be: {YOUR_NGROK_URL}/api/webhook`);
+    console.log(`\n🚀 Secure Webhook Server Running`);
 });
+
