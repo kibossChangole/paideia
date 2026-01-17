@@ -22,8 +22,9 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Debug: Check if WEBHOOK_SECRET is loaded
+const webhookSecret = process.env.WEBHOOK_SECRET || process.env.EXPO_PUBLIC_WEBHOOK_SECRET;
 console.log('-----------------------------------------');
-console.log('SECRET STATUS:', process.env.WEBHOOK_SECRET ? '✅ LOADED' : '❌ MISSING');
+console.log('SECRET STATUS:', webhookSecret ? '✅ LOADED' : '❌ MISSING');
 console.log('PORT:', port);
 console.log('-----------------------------------------');
 
@@ -39,7 +40,7 @@ app.post('/api/webhook', async (req, res) => {
     const { secret } = req.query;
 
     // 1. SECURITY: Verify Secret Key
-    const expectedSecret = process.env.WEBHOOK_SECRET;
+    const expectedSecret = process.env.WEBHOOK_SECRET || process.env.EXPO_PUBLIC_WEBHOOK_SECRET;
     
     if (!secret || secret !== expectedSecret) {
         console.log('⚠️ UNAUTHORIZED WEBHOOK ATTEMPT');
